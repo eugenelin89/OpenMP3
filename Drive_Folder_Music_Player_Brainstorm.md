@@ -148,7 +148,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 
 ## 6. Technical direction — hypotheses, not yet validated
 
-**Target stack:** Swift, SwiftUI, AVFoundation/AVPlayer, AVAudioSession, MPNowPlayingInfoCenter, MPRemoteCommandCenter. Store saved folder links locally (e.g., UserDefaults initially). Follow the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth) for the deployment target and API/dependency availability. For background playback, enable the **Audio** background mode (\`UIBackgroundModes\` includes \`audio\`), use an \`AVAudioSession\` playback category, and retain the active player/queue when the app becomes inactive. Handle audio-session interruptions and route changes, including navigation announcements; do not rely on a foreground-only UI lifecycle.
+**Target stack:** Swift, SwiftUI, AVFoundation/AVPlayer, AVAudioSession, MPNowPlayingInfoCenter, MPRemoteCommandCenter. Store saved folder links locally (e.g., UserDefaults initially). Follow the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth) for the deployment target and API/dependency availability. For background playback, enable the **Audio** background mode (`UIBackgroundModes` includes `audio`), use an `AVAudioSession` playback category, and retain the active player/queue when the app becomes inactive. Handle audio-session interruptions and route changes, including navigation announcements; do not rely on a foreground-only UI lifecycle.
 
 ### Option A — Public-link-only, no API key (preferred experiment)
 
