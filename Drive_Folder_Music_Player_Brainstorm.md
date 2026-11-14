@@ -1,11 +1,21 @@
 # Public Google Drive Music Player — Living Brainstorm
 
-> **Status:** Product discovery / pre-build; requirements captured, implementation unverified  
-> **Version:** 0.2  
+> **Status:** OpenMP3 v0.1 weekend prototype kickoff; implementation unverified  
+> **Version:** 0.3 (document revision; not the app release version)  
+> **App release target:** 0.1 — experimental iPhone weekend prototype  
+> **GitHub kickoff issue:** [#1 — OpenMP3 v0.1](https://github.com/eugenelin89/OpenMP3/issues/1)  
 > **Created:** 2026-11-14  
 > **Last updated:** 2026-11-14  
 > **Working title:** Drive Folder Music Player (name TBD)  
 > **Purpose:** A living source of truth for brainstorming, technical experiments, decisions, and Codex implementation.
+
+## Weekend prototype kickoff — OpenMP3 app v0.1
+
+- **Single kickoff issue:** [GitHub #1 — OpenMP3 v0.1 weekend prototype](https://github.com/eugenelin89/OpenMP3/issues/1). Use this as the entry point for the installed Matt Pocock/Codex workflow; let that workflow break the work into small implementation tickets.
+- **Release goal:** One demonstrably working native iPhone player for public Drive-folder MP3 streaming; no production-grade roadmap, backend, login, or App Store release required.
+- **Build order:** First validate anonymous recursive discovery and playback, preferably without an API key. If that is unreliable, document the blocker and evaluate an official API-based fallback. Then deliver the retro player, folder queue and shuffle; add local custom playlists and background/lock-screen support as the core proves stable.
+- **Time-boxing principle:** Preserve a playable vertical slice even if stretch features remain unfinished. Clearly distinguish tested behavior from aspirations.
+- **Scope authority:** This document remains the detailed ideas/requirements log; issue #1 defines the executable weekend-prototype checklist. The **app release target v0.1** is separate from this document's **revision v0.3**.
 
 ## 1. The idea in one sentence
 
@@ -244,6 +254,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 
 ## 15. Changelog
 
+- **2026-11-14 / v0.3:** Reframed OpenMP3 **app v0.1** as a weekend experiment, linked GitHub kickoff issue #1, and separated the app release number from the living document revision. Prioritized feasibility and a playable vertical slice before polish.
 - **2026-11-14 / v0.2:** Added a PM-style requirements register, user journeys, a Winamp-inspired visual direction, recursive folder playback, folder/playlist modes, shuffle, acceptance criteria, phased roadmap, success measures, risks, and decisions D-006–D-009. Supersedes v0.1's deferred nested-subfolder assumption.
 - **2026-11-14 / v0.1:** Initial living brainstorm: concept, scope, user flow, competing technical approaches, feasibility test, questions, and decisions.
 
