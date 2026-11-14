@@ -1,7 +1,7 @@
 # Public Google Drive Music Player — Living Brainstorm
 
 > **Status:** OpenMP3 v0.1 weekend prototype kickoff; implementation unverified  
-> **Version:** 0.3 (document revision; not the app release version)  
+> **Version:** 0.4 (document revision; not the app release version)  
 > **App release target:** 0.1 — experimental iPhone weekend prototype  
 > **GitHub kickoff issue:** [#1 — OpenMP3 v0.1](https://github.com/eugenelin89/OpenMP3/issues/1)  
 > **Created:** 2026-11-14  
@@ -13,9 +13,22 @@
 
 - **Single kickoff issue:** [GitHub #1 — OpenMP3 v0.1 weekend prototype](https://github.com/eugenelin89/OpenMP3/issues/1). Use this as the entry point for the installed Matt Pocock/Codex workflow; let that workflow break the work into small implementation tickets.
 - **Release goal:** One demonstrably working native iPhone player for public Drive-folder MP3 streaming; no production-grade roadmap, backend, login, or App Store release required.
-- **Build order:** First validate anonymous recursive discovery and playback, preferably without an API key. If that is unreliable, document the blocker and evaluate an official API-based fallback. Then deliver the retro player, folder queue and shuffle; add local custom playlists and background/lock-screen support as the core proves stable.
+- **Build order:** First validate anonymous recursive discovery and playback, preferably without an API key. If that is unreliable, document the blocker and evaluate an official API-based fallback. Then deliver the retro player, folder queue, shuffle, and **required background/lock-screen playback while another app (especially Google Maps navigation) is foregrounded**; add local custom playlists as capacity allows.
 - **Time-boxing principle:** Preserve a playable vertical slice even if stretch features remain unfinished. Clearly distinguish tested behavior from aspirations.
-- **Scope authority:** This document remains the detailed ideas/requirements log; issue #1 defines the executable weekend-prototype checklist. The **app release target v0.1** is separate from this document's **revision v0.3**.
+- **Scope authority:** This document remains the detailed ideas/requirements log; issue #1 defines the executable weekend-prototype checklist. The **app release target v0.1** is separate from this document's revision number. Keep all concrete platform versions and device-model targets **only** in the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth); other sections and GitHub issues link to it.
+
+## Platform compatibility baseline (single source of truth)
+
+> **Canonical configuration for OpenMP3 v0.1.** Update the version and reference device **only here**. Other parts of this document and GitHub Issue #1 must link to this section rather than repeat those values.
+
+- **Minimum supported OS / Xcode deployment target:** **iOS 15.0**.
+- **Legacy reference device for compatibility testing:** **iPhone 8**, with **iPhone 8 Plus** in the same support class. The reference device must be running a supported OS version. Apple's compatibility list includes these models in iOS 16; they are not eligible for iOS 17. Older models able to run the minimum OS may work too, but are **not** an additional tested-hardware promise.
+- **Support policy:** The app must install, launch, load a public Drive folder, play MP3s, and perform the P0 background-navigation scenario on supported devices. Avoid newer-only SDK features or frameworks that raise the deployment target; gate newer APIs with availability checks and a usable fallback.
+- **Build-tool caveat:** Apple's Xcode deployment-target range does not always equal its direct device-install/debug range. In particular, Xcode 27 supports iOS 15 deployment targets but lists iOS 17 or later for direct device support; use an appropriate supported Xcode toolchain or another validated installation/test method for older physical hardware. Do not assume successful compilation proves old-device compatibility.
+- **Validation status:** Requirement confirmed, **not yet implemented or tested**. Test on the reference device when available; otherwise record compatibility as unverified, not passed. Recheck SDK/dependency support before changing this baseline.
+- **Change control:** Any proposal to raise the minimum must be an explicit product decision; update this section, the Xcode project settings, and the corresponding test evidence together.
+
+**Reference material:** [Apple's iOS 16 device list](https://support.apple.com/en-ca/103267) · [Apple's Xcode SDK/device-support matrix](https://developer.apple.com/xcode/system-requirements/) · [Apple's API-availability guidance](https://developer.apple.com/documentation/xcode/running-code-on-a-specific-version/)
 
 ## 1. The idea in one sentence
 
@@ -30,7 +43,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 1. **Link-first:** The public folder URL is the primary input.
 2. **No account required:** No Google OAuth, no app account, no sign-up for the initial version.
 3. **No API key initially:** Investigate whether public-link discovery and streaming can work without the official Google Drive API. This is a *hypothesis to validate*, not a proven capability.
-4. **Native iPhone experience:** SwiftUI interface, background audio, lock-screen controls.
+4. **Native iPhone experience:** SwiftUI interface, background audio, lock-screen controls, and compatibility with the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth).
 5. **Nostalgic but usable:** Capture the compact, tactile, classic Winamp 2.x feel while meeting modern iPhone touch, accessibility, and background-audio needs; do not reuse Winamp logos, copyrighted skin assets, or trademarks as app branding.
 6. **Folder-first listening:** One pasted root folder can act as a complete library, including nested folders; custom playlists add curation without requiring reorganization in Drive.
 7. **Technical proof before UI build:** Prove one track and recursive discovery before investing in the full player.
@@ -52,7 +65,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 3. Tap **Load**. See scanning progress, playable track count, and clear errors for inaccessible subfolders/files.
 4. Browse tracks (with folder paths for disambiguating duplicate filenames), then **Play all** or **Shuffle all**.
 5. Optionally create a named playlist, add tracks, rearrange them, and save it.
-6. Continue playback with the screen locked, with remote/headphone controls.
+6. Continue playback with the screen locked or OpenMP3 backgrounded, including while Google Maps is foregrounded for navigation; expose lock-screen and supported remote/headphone controls.
 
 ### Visual direction — classic Winamp-inspired, not a literal skin copy
 
@@ -92,10 +105,11 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 | R-05 | Create and manage **custom in-app playlists** | Core | Confirmed | Users can name, save, add/remove tracks, reorder and play playlists; they persist after app restart |
 | R-06 | **Classic Winamp-inspired** UI | Core | Confirmed direction | Primary playback screen visibly follows the retro design direction and remains operable with iPhone touch and accessibility controls |
 | R-07 | Music-player transport: play/pause, next/previous, seek, volume where supported, repeat off/all/one | Core | Confirmed general capability; details proposed | Controls affect the active queue predictably, including at its beginning/end |
-| R-08 | Play in background, on lock screen, and with headset/Bluetooth remote controls | Core | Carried forward | Playback and remote commands function on a physical iPhone when the app is backgrounded or locked |
+| R-08 | **Keep music playing while another app is foregrounded, especially Google Maps navigation**; also support locked-screen audio and headset/Bluetooth controls | Core / P0 | **Confirmed** | Start playback, switch to Google Maps and use navigation; the current track keeps playing, next tracks auto-advance, and playback remains available when locked. Navigation prompts and interruptions are handled with system-appropriate duck/pause/resume behavior. Verify on physical hardware; see background-audio scenario below |
 | R-09 | Remember added folder links and playlist definitions locally | Core | Carried forward | Saved entries remain after relaunch; no app account required |
 | R-10 | Explain partial scans, unavailable tracks, network errors, and Drive limits | Core | Proposed quality requirement | Error states identify failed folders/tracks and allow retry without pretending every track loaded |
 | R-11 | More advanced music-player capabilities | Later / explore | User goal, feature list unconfirmed | Evaluate equalizer, gapless/crossfade, ID3/artwork, search/sort, sleep timer, queue editing, offline cache, AirPlay and CarPlay; prioritize individually before development |
+| R-12 | **Support legacy iPhones according to the single compatibility baseline** | Core / P0 | **Confirmed** | Deployment target and APIs match the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth); run the full P0 flow on reference hardware when available, or explicitly mark device coverage unverified |
 
 **Core = desired initial product experience**, not a claim that every item is technically achievable without an API key. For development, validate the technology first; then sequence implementation.
 
@@ -105,13 +119,15 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 - **Shuffle:** Shuffle operates on whichever queue is active (entire folder tree versus selected playlist); changing modes does not corrupt playlist contents. Repeat One, Repeat All, and shuffle interaction need defined behavior.
 - **Custom playlist:** Build and save a playlist from a loaded folder; reorder it; relaunch the app; play it again. Store stable file/folder identifiers rather than assuming an expiring download URL is permanent; gracefully handle files later removed or made private.
 - **Retro interface:** Check readability, button hit areas, VoiceOver, large text, and iPhone layouts; nostalgia must not make the player unusable.
+- **Google Maps / background playback (R-08):** On a physical iPhone, begin streaming a multi-track queue in OpenMP3, switch to Google Maps, start a navigation route while stationary or as a passenger, and verify music continues with Maps foregrounded. Check spoken-direction ducking or interruptions, automatic resumption where appropriate, auto-advance to the next MP3, screen lock, headphones/Bluetooth, and returning to OpenMP3 without losing place. Treat third-party navigation prompt behavior as dependent on the actual iOS audio session/route; do not claim that every prompt must mix simultaneously with music.
+- **Legacy compatibility (R-12):** Build with the deployment target from the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth); run install/launch, folder loading, background-navigation playback, shuffle, and remote controls on the reference hardware, or explicitly record which checks could not be run.
 
 ### Suggested release sequence — validate before committing
 
 | Stage | Outcome | Scope |
 | --- | --- | --- |
 | **0 — Feasibility spike** | Confirm a trustworthy way to list public folder trees and stream MP3 audio | Start with one public track, then recursively enumerate nested folders, stream/seek, and record no-key limitations |
-| **1 — Core player** | A genuinely useful iPhone music player | Retro-inspired UI, recursive folder mode, play controls, shuffle/repeat, custom playlists, persistence, background playback |
+| **1 — Core player** | A genuinely useful iPhone music player | Retro-inspired UI, recursive folder mode, play controls, shuffle/repeat, persistence, **background playback during navigation (P0)**, legacy compatibility per the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth); custom playlists if feasible |
 | **2 — Power-user polish** | A more advanced player | Prioritize equalizer, visualizer, metadata/artwork, search/sort, gapless/crossfade, queue management, offline options, and integrations based on testing and feedback |
 
 ### Product success measures (targets to set after prototyping)
@@ -132,7 +148,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 
 ## 6. Technical direction — hypotheses, not yet validated
 
-**Target stack:** Swift, SwiftUI, AVFoundation/AVPlayer, AVAudioSession, MPNowPlayingInfoCenter, MPRemoteCommandCenter. Store saved folder links locally (e.g., UserDefaults initially).
+**Target stack:** Swift, SwiftUI, AVFoundation/AVPlayer, AVAudioSession, MPNowPlayingInfoCenter, MPRemoteCommandCenter. Store saved folder links locally (e.g., UserDefaults initially). Follow the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth) for the deployment target and API/dependency availability. For background playback, enable the **Audio** background mode (\`UIBackgroundModes\` includes \`audio\`), use an \`AVAudioSession\` playback category, and retain the active player/queue when the app becomes inactive. Handle audio-session interruptions and route changes, including navigation announcements; do not rely on a foreground-only UI lifecycle.
 
 ### Option A — Public-link-only, no API key (preferred experiment)
 
@@ -169,7 +185,8 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 - [ ] List all expected MP3 filenames **recursively**, retaining relative folder paths, and report any subfolders that could not be scanned.
 - [ ] Play the first track audibly on iPhone.
 - [ ] Seek within the track and play the next track.
-- [ ] Verify playback with the app backgrounded and phone locked.
+- [ ] Verify playback with the app backgrounded and phone locked, including **Google Maps foreground navigation** with spoken directions; confirm audio/queue continuity and appropriate interruption recovery.
+- [ ] Check the app against the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth); verify on the reference physical device where possible and record any untested compatibility claims.
 - [ ] Repeat after app restart and on a different network.
 - [ ] Record exact failure causes if any step is blocked.
 
@@ -187,7 +204,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 - Store links locally; avoid logging full folder URLs or forwarding them to third-party services.
 - Handle link-based resource keys if present; do not treat them as authentication for private content.
 - Respect copyright, users' access permissions, Google Drive service terms, and rate/download limits.
-- Use standard iOS background audio capabilities; test actual behavior instead of assuming it.
+- Use standard iOS background audio capabilities; Google Maps navigation in the foreground is a **required** test scenario, not a future enhancement. Test actual interruptions and background transitions instead of assuming they work. Follow the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth) for supported platforms.
 - If considering App Store release, assess reliability and current App Review requirements before submission.
 
 ## 9. Open questions for our brainstorm
@@ -221,6 +238,8 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 | 2026-11-14 | D-007 | Recursive playback of the root **and all nested folders** is a core requirement | Explicit user requirement; supersedes v0.1 subfolders-as-later assumption |
 | 2026-11-14 | D-008 | Support both folder mode and saved in-app custom playlists, with shuffle | Explicit user requirement |
 | 2026-11-14 | D-009 | Keep advanced features in a prioritized discovery backlog until specified | User wants a capable player; exact advanced set is not yet defined |
+| 2026-11-14 | D-010 | Require music to keep playing when Google Maps navigation is in the foreground | Explicit user requirement; prioritize background audio in P0 |
+| 2026-11-14 | D-011 | Centralize all explicit platform/device versions in one [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth) | Explicit user preference; avoid documentation drift and simplify future changes |
 
 ## 11. Parking lot — ideas to revisit
 
@@ -234,7 +253,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 
 ## 12. Codex kickoff task (copy/paste)
 
-> Build a minimal native SwiftUI iPhone proof of concept for OpenMP3. Start with the feasibility spike in Section 7, **not** the complete Winamp-inspired interface. Accept a Google Drive root-folder URL shared as “Anyone with the link → Viewer.” First attempt to list and stream one MP3 with **no Google sign-in and no Google Drive API key**; then attempt recursive discovery through at least two nested subfolder levels. Record exact results for access, pagination, scanning, streaming, seeking, and background playback. Do not use brittle webpage scraping without documenting its fragility or bypass Google access restrictions. If no-key discovery is not viable, propose a minimal supported API fallback before implementing it. Use AVPlayer where viable; test on a physical iPhone when available. After the feasibility decision, implement the prioritized requirements R-01 through R-10 in small tested increments.
+> Build a minimal native SwiftUI iPhone proof of concept for OpenMP3. Start with the feasibility spike in Section 7, **not** the complete Winamp-inspired interface. Accept a Google Drive root-folder URL shared as “Anyone with the link → Viewer.” First attempt to list and stream one MP3 with **no Google sign-in and no Google Drive API key**; then attempt recursive discovery through at least two nested subfolder levels. Record exact results for access, pagination, scanning, streaming, seeking, and **background playback while Google Maps navigation is in the foreground**. Follow the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth) for the minimum OS and legacy validation device; do not repeat or change those values in implementation tickets. Do not use brittle webpage scraping without documenting its fragility or bypass Google access restrictions. If no-key discovery is not viable, propose a minimal supported API fallback before implementing it. Use AVPlayer where viable; test on a physical iPhone when available, recording unverified checks honestly. After the feasibility decision, implement the prioritized requirements R-01 through R-10 and R-12 in small tested increments.
 
 ## 13. Next actions
 
@@ -242,7 +261,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 2. Run the no-key proof of concept in Codex.
 3. Record results here under **Experiment log**.
 4. Decide whether to proceed with Option A or Option B.
-5. Confirm the advanced-player backlog and final retro UI direction, then turn requirements R-01–R-10 into small Codex/GitHub issues.
+5. Confirm the advanced-player backlog and final retro UI direction, then turn requirements R-01–R-10 and R-12 into small Codex/GitHub issues. Keep all issue references to platform versions linked to the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth).
 
 ## 14. Experiment log
 
@@ -251,9 +270,12 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 | — | Public root and nested folder anonymous listing | Not yet tested | — | Codex spike |
 | — | Direct MP3 streaming on iPhone | Not yet tested | — | Codex spike |
 | — | Seek, next track, background playback | Not yet tested | — | Codex spike |
+| — | Google Maps foreground navigation, spoken prompts and queue continuity | Not yet tested | — | Core P0 device test |
+| — | Baseline legacy-device installation and playback | Not yet tested | See [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth) | Legacy compatibility test |
 
 ## 15. Changelog
 
+- **2026-11-14 / v0.4:** Made Google Maps foreground navigation/background playback an explicit P0 requirement with a device test. Added R-12 and one canonical [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth) for minimum OS and legacy reference device; other sections and Issue #1 link rather than duplicate versions.
 - **2026-11-14 / v0.3:** Reframed OpenMP3 **app v0.1** as a weekend experiment, linked GitHub kickoff issue #1, and separated the app release number from the living document revision. Prioritized feasibility and a playable vertical slice before polish.
 - **2026-11-14 / v0.2:** Added a PM-style requirements register, user journeys, a Winamp-inspired visual direction, recursive folder playback, folder/playlist modes, shuffle, acceptance criteria, phased roadmap, success measures, risks, and decisions D-006–D-009. Supersedes v0.1's deferred nested-subfolder assumption.
 - **2026-11-14 / v0.1:** Initial living brainstorm: concept, scope, user flow, competing technical approaches, feasibility test, questions, and decisions.
