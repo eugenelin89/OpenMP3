@@ -1,7 +1,7 @@
 # Public Google Drive Music Player — Living Brainstorm
 
 > **Status:** OpenMP3 v0.1 weekend prototype kickoff; implementation unverified  
-> **Version:** 0.7 (document revision; not the app release version)  
+> **Version:** 0.8 (document revision; not the app release version)  
 > **App release target:** 0.1 — experimental iPhone weekend prototype  
 > **GitHub kickoff issue:** [#1 — OpenMP3 v0.1](https://github.com/eugenelin89/OpenMP3/issues/1)  
 > **Created:** 2026-11-14  
@@ -54,6 +54,19 @@
 - **Non-MP3 files:** Ignore (apart from reporting skipped shortcuts when encountered); use stable file IDs so same-named tracks in different folders are distinguishable.
 - **Validation:** Test roots, nested descendants, ignored shortcuts, exactly-at-limit and over-limit fixtures, partial failures, and ability to play discovered tracks after a cutoff.
 
+## v0.1 collection, queue and recovery behavior
+
+> **Canonical playback rules for grilling decisions Q6–Q12.** Later specs and tickets should reference this section rather than inventing different behavior. None of these decisions changes the separate [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth) or [scan limits](#v01-recursive-scan-boundary-and-limits).
+
+- **Multiple saved roots, one active queue:** Persist multiple public Drive root links. Save and restore the last *selected* root. A root selection or new scan **never** replaces or interrupts music already playing. An explicit **Play/Play All** from a settled collection replaces the active queue; combining multiple root collections is deferred.
+- **Scan gate / Stop scan:** New collections are playable only after scanning has **completed**, **failed partially**, **stopped at a documented limit**, or the listener has pressed **Stop scan**. Keep discovered tracks playable in incomplete results, and label incomplete/partial scans and why they stopped. Existing playback can continue in the background while another root is scanned. **Load/scan never autoplays.**
+- **Default queue order:** For ordinary, non-shuffled playback, play MP3s in the root folder first; then group by relative descendant folder path, then sort filenames *within each folder*, using natural numeric ordering (e.g., `02` before `10`). Use a deterministic tie breaker for duplicate names. Shuffle changes queue order only when explicitly enabled.
+- **Relaunch/termination:** Persist saved root links and last selected root; do **not** automatically restore the previous queue, shuffle history or playback position after the app has been terminated. Require a fresh scan and an explicit Play after a cold relaunch. This **does not affect** required uninterrupted playback while the app is merely backgrounded or the screen is locked.
+- **Cellular use:** Cellular streaming is enabled by default, with a visible and understandable mobile-data notice. Defer a Wi-Fi-only switch. Never autoplay from a saved/root folder merely because Load finished.
+- **Playback failure policy:** A definitively deleted or inaccessible MP3 is marked unavailable and skipped to the next playable track. A potentially recoverable **network, connectivity or quota** failure gets bounded retries, then pauses on the current track with a **Retry** action and best-effort preservation of position. Do not misclassify temporary quota/access errors as permanently missing music; no infinite retry/skip loops. When no playable tracks remain, stop with a clear explanation.
+- **Navigation/interruption policy:** Google Maps announcements may duck the audio or temporarily interrupt it. Resume after a system interruption only when permitted and only if OpenMP3 was playing beforehand. A deliberate user pause remains paused; headset/Bluetooth disconnection pauses and reconnection alone **never autoplays**.
+- **Acceptance coverage:** Test switching roots while playing, incomplete scan Stop/limit behavior, stable default ordering, cold relaunch, cellular disclosure, removed-vs-temporary file failures, and navigation prompts plus user/disconnect pause precedence. On-device claims require actual test evidence.
+
 ## 1. The idea in one sentence
 
 **OpenMP3** is a native iPhone music player with a classic Winamp-inspired look: paste a public Google Drive folder URL, discover MP3s **recursively across its subfolders**, then play the entire collection in folder mode or build custom playlists. No Google sign-in; avoid an API key if a reliable no-key approach proves feasible.
@@ -67,12 +80,13 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 1. **Link-first:** The public folder URL is the primary input.
 2. **No account required:** No Google OAuth, no app account, no sign-up for the initial version.
 3. **No API key initially:** Investigate no-key access first; if it is unsupported or brittle, a developer-configured restricted Drive API key is an approved fallback. Neither public-folder listing nor media streaming is assumed to work until tested. No listener OAuth or account.
-4. **Native iPhone experience:** SwiftUI interface, background audio, lock-screen controls, and compatibility with the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth).
-5. **Nostalgic but usable:** Capture the compact, tactile, classic Winamp 2.x feel while meeting modern iPhone touch, accessibility, and background-audio needs; do not reuse Winamp logos, copyrighted skin assets, or trademarks as app branding.
-6. **Folder-first listening:** One pasted root folder can act as a complete library, including nested folders; custom playlists add curation without requiring reorganization in Drive.
-7. **Technical proof before UI build:** Prove one track and recursive discovery before investing in the full player.
-8. **Transparent failure:** Explain inaccessible folders, unsupported files, and playback failures rather than silently failing.
-9. **Free core player:** Preserve free folder playback, shuffle, and background audio even if optional premium features are later offered (see [monetization proposal](#monetization-proposal-single-source-of-truth-for-commercial-terms)).
+4. **Explicit listening transitions:** Scanning a saved root never starts or replaces playback; see [collection, queue and recovery behavior](#v01-collection-queue-and-recovery-behavior).
+5. **Native iPhone experience:** SwiftUI interface, background audio, lock-screen controls, and compatibility with the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth).
+6. **Nostalgic but usable:** Capture the compact, tactile, classic Winamp 2.x feel while meeting modern iPhone touch, accessibility, and background-audio needs; do not reuse Winamp logos, copyrighted skin assets, or trademarks as app branding.
+7. **Folder-first listening:** One pasted root folder can act as a complete library, including nested folders; custom playlists add curation without requiring reorganization in Drive.
+8. **Technical proof before UI build:** Prove one track and recursive discovery before investing in the full player.
+9. **Transparent failure:** Explain inaccessible folders, unsupported files, and playback failures rather than silently failing.
+10. **Free core player:** Preserve free folder playback, shuffle, and background audio even if optional premium features are later offered (see [monetization proposal](#monetization-proposal-single-source-of-truth-for-commercial-terms)).
 
 ## 4. User experience — agreed direction, design still exploratory
 
@@ -80,7 +94,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 
 ### The two listening modes
 
-1. **Folder mode (default):** Paste or choose a saved *top-level* public folder. Automatically find playable MP3s in that folder **and all nested subfolders**, build a play queue, and let the listener play in order or shuffle. This is the “just give it a folder and play” flow.
+1. **Folder mode (default):** Paste or choose among saved public root folders. Scan the selected root and its actual descendant folders. Once the scan settles, users can explicitly Play all or Shuffle all discovered MP3s; scanning another root does **not** replace the existing queue. See [collection, queue and recovery behavior](#v01-collection-queue-and-recovery-behavior).
 2. **Playlist mode:** Create a named playlist in the app; add individual tracks found in saved folders, remove/reorder them, and play or shuffle that selection. A playlist is a locally stored set of references, **not** a new Drive folder or an upload. A future paid unlock for playlist creation is proposed in the [monetization section](#monetization-proposal-single-source-of-truth-for-commercial-terms); the prototype may demonstrate playlists without live billing.
 
 ### First-run journey
@@ -88,7 +102,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 1. Open OpenMP3; see a Winamp-inspired player.
 2. Paste an **Anyone with the link → Viewer** Google Drive root-folder URL.
 3. Tap **Load**. See scanning progress, playable track count, and clear errors for inaccessible subfolders/files.
-4. Browse tracks (with folder paths for disambiguating duplicate filenames), then **Play all** or **Shuffle all**.
+4. After the scan settles (complete or incomplete), browse discovered tracks with folder paths for disambiguating duplicate filenames, then explicitly **Play all** or **Shuffle all**. Load itself never autoplays.
 5. Optionally create a named playlist, add tracks, rearrange them, and save it.
 6. Continue playback with the screen locked or OpenMP3 backgrounded, including while Google Maps is foregrounded for navigation; expose lock-screen and supported remote/headphone controls.
 
@@ -125,28 +139,30 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 | --- | --- | --- | --- | --- |
 | R-01 | Accept a public Google Drive folder URL without Google sign-in | Core | Confirmed | The listener pastes a public root URL and can attempt to load it without OAuth |
 | R-02 | **Discover MP3s recursively** in the root and accessible **actual descendant folders** | Core / P0 | Confirmed | A three-level test tree lists each eligible MP3 once, including deep descendants; non-audio files and shortcuts are excluded, and skipped shortcuts reported. Respect the [scan boundary and limits](#v01-recursive-scan-boundary-and-limits) |
-| R-03 | **Folder mode**: play the loaded folder tree as one collection | Core | Confirmed | Play All creates a queue from the recursive collection and automatically advances through it |
-| R-04 | Shuffle the folder collection and custom playlists | Core | Confirmed | Shuffle changes track order across the relevant queue; no repeats in a cycle until exhausted unless repeat behavior says otherwise |
+| R-03 | **Folder mode**: play one loaded folder tree at a time | Core / P0 | Confirmed | After scan settles, explicit Play All replaces the active queue and advances through discovered tracks. Merely selecting or scanning a different root does not interrupt current audio; see [queue and recovery behavior](#v01-collection-queue-and-recovery-behavior) |
+| R-04 | Queue order and shuffle for folder collection; future playlists | Core / P0 for folder mode; playlist shuffle stretch | Confirmed | Non-shuffle order groups by root/path/filename with natural numeric sorting. Explicit shuffle changes order within the active queue; no repeats until the cycle is exhausted unless repeat behavior says otherwise. See [queue rules](#v01-collection-queue-and-recovery-behavior) |
 | R-05 | Create and manage **custom in-app playlists** | Stretch for v0.1; future planned capability | User goal confirmed; **not a v0.1 completion gate** | When built, users can name, save, add/remove tracks, reorder and play playlists; they persist after app restart |
 | R-06 | **Classic Winamp-inspired** UI | Core | Confirmed direction | Primary playback screen visibly follows the retro design direction and remains operable with iPhone touch and accessibility controls |
 | R-07 | Music-player transport: play/pause, next/previous, seek, volume where supported, repeat off/all/one | Core / P0 | Confirmed general capability; details proposed | Controls affect the active queue predictably, including at its beginning/end. Lock-screen and supported headset/Bluetooth play/pause and next/previous are required P0 remote commands; artwork/richer metadata is optional |
 | R-08 | **Keep music playing while another app is foregrounded, especially Google Maps navigation**; also support locked-screen audio and headset/Bluetooth controls | Core / P0 | **Confirmed** | Start playback, switch to Google Maps and use navigation; current and next tracks play, and lock-screen plus supported headset/Bluetooth play/pause and next/previous work. Handle interruptions with system-appropriate duck/pause/resume behavior. Verify on physical hardware |
-| R-09 | Remember added folder links and playlist definitions locally | Core | Carried forward | Saved entries remain after relaunch; no app account required |
-| R-10 | Explain partial scans, unavailable tracks, network errors, and Drive limits | Core | Proposed quality requirement | Error states identify failed folders/tracks and allow retry without pretending every track loaded |
+| R-09 | Persist saved public root links and the last selected root; playlist storage is stretch | Core / P0 for roots | Confirmed | Multiple links and the last selected root remain after relaunch. After termination, a fresh scan and explicit Play are required; previous queue, position and shuffle history need not be restored. See [relaunch policy](#v01-collection-queue-and-recovery-behavior) |
+| R-10 | Differentiate unavailable tracks, temporary network/quota interruptions, scan failures and Drive limits | Core / P0 | Confirmed | Missing tracks are skipped; temporary failures get bounded retries then pause with Retry and best-effort preserved position; incomplete scans are labeled. Never loop infinitely. See [recovery behavior](#v01-collection-queue-and-recovery-behavior) |
 | R-11 | More advanced music-player capabilities | Later / explore | User goal, feature list unconfirmed | Evaluate equalizer, gapless/crossfade, ID3/artwork, search/sort, sleep timer, queue editing, offline cache, AirPlay and CarPlay; prioritize individually before development |
 | R-12 | **Support legacy iPhones according to the single compatibility baseline** | Core / P0 | **Confirmed** | Deployment target and APIs match the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth); run the full P0 flow on reference hardware when available, or explicitly mark device coverage unverified |
 | R-13 | **Free player plus optional paid upgrade** | Product direction confirmed; pricing / entitlement proposed | Discovery; live IAP post-prototype | Free users retain recursive playback, shuffle, and navigation background audio. A proposed one-time unlock enables unlimited named custom playlists. For price, purchase type, and implementation boundaries see [monetization proposal](#monetization-proposal-single-source-of-truth-for-commercial-terms). |
-| R-14 | **Bounded recursive scans with transparent incomplete results** | Core / P0 | Confirmed | Respect the [scan boundary and limits](#v01-recursive-scan-boundary-and-limits); keep discovered tracks playable and clearly mark any truncated or partially failed scan incomplete |
+| R-14 | **Bounded recursive scans with transparent incomplete results** | Core / P0 | Confirmed | Respect the [scan boundary and limits](#v01-recursive-scan-boundary-and-limits); on completion/partial error/limit/Stop scan retain discovered tracks as a settled playable collection and clearly mark incomplete results. See [scan gate](#v01-collection-queue-and-recovery-behavior) |
+| R-15 | Multiple saved public roots, one active collection | Core / P0 | Confirmed | Save and choose roots independently of playback; only explicit Play on a settled collection changes the active queue; see [collection policy](#v01-collection-queue-and-recovery-behavior) |
+| R-16 | Cellular streaming and safe audio interruption handling | Core / P0 | Confirmed | Cellular works with a data-use notice; navigation prompts may duck or interrupt but only resume when appropriate, while user pause/disconnection remains paused; see [recovery policy](#v01-collection-queue-and-recovery-behavior) |
 
 **Core = desired initial product experience**, not a claim that every item is technically achievable without an API key. For development, validate the technology first; then sequence implementation.
 
 ### Acceptance scenarios for the hardest features
 
 - **Recursive listing:** Fixture includes root, nested A, A/B, and A/B/C; MP3s at multiple depths; ignored TXT/JPG and shortcuts; duplicate filenames in different folders. Scan actual accessible descendants, handle pagination, preserve distinguishable paths, and report partial failures. Apply the [scan boundary and limits](#v01-recursive-scan-boundary-and-limits) with explicit incomplete indicators and playable discovered tracks.
-- **Shuffle:** Shuffle operates on whichever queue is active (entire folder tree versus selected playlist); changing modes does not corrupt playlist contents. Repeat One, Repeat All, and shuffle interaction need defined behavior.
+- **Shuffle:** Shuffle operates on the active folder queue (or a playlist when the stretch feature exists). Non-shuffle uses [root/path/filename ordering](#v01-collection-queue-and-recovery-behavior). Repeat One, Repeat All, and shuffle interaction should be tested without corrupting saved playlists.
 - **Custom playlist:** Build and save a playlist from a loaded folder; reorder it; relaunch the app; play it again. Store stable file/folder identifiers rather than assuming an expiring download URL is permanent; gracefully handle files later removed or made private.
 - **Retro interface:** Check readability, button hit areas, VoiceOver, large text, and iPhone layouts; nostalgia must not make the player unusable.
-- **Google Maps / background playback (R-08):** On a physical iPhone, begin streaming a multi-track queue in OpenMP3, switch to Google Maps, start a navigation route while stationary or as a passenger, and verify music continues with Maps foregrounded. Check spoken-direction ducking or interruptions, automatic resumption where appropriate, auto-advance to the next MP3, **play/pause and next/previous via lock-screen and supported headset/Bluetooth remotes**, and returning to OpenMP3 without losing place. Rich artwork/metadata is optional. Treat third-party navigation prompt behavior as dependent on the actual iOS audio session/route; do not claim that every prompt must mix simultaneously with music.
+- **Google Maps / background playback (R-08):** On a physical iPhone, begin streaming a multi-track queue in OpenMP3, switch to Google Maps, start a navigation route while stationary or as a passenger, and verify music continues with Maps foregrounded. Check spoken-direction ducking or interruptions, resumption **only if previously playing**, auto-advance to the next MP3, **play/pause and next/previous via lock-screen and supported headset/Bluetooth remotes**, no autoplay after headset reconnection or deliberate pause, and returning to OpenMP3 without losing place. Rich artwork/metadata is optional. Treat third-party navigation prompt behavior as dependent on the actual iOS audio session/route; see [interruption policy](#v01-collection-queue-and-recovery-behavior).
 - **Legacy compatibility (R-12):** Build with the deployment target from the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth); run install/launch, folder loading, background-navigation playback, shuffle, and remote controls on the reference hardware, or explicitly record which checks could not be run.
 - **Free and premium boundary (R-13):** Simulate free vs. unlocked states without collecting payment during the prototype. Free users must be able to play all recursively discovered MP3s and use background audio and shuffle. If a real premium purchase is later implemented, users can purchase once, create/reorder/persist multiple playlists, and restore entitlement without paying twice. Use the [monetization proposal](#monetization-proposal-single-source-of-truth-for-commercial-terms) as the sole source for tentative pricing.
 
@@ -244,8 +260,8 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 | Q2 | Must the app work with *zero* API keys, or is that only a preference? | **Resolved:** Try zero-key first; developer-configured restricted key is an accepted fallback |
 | Q3 | Are all audio files directly in one folder, or are subfolders important? | **Resolved:** Recursive discovery is a core user requirement |
 | Q4 | MP3 only, or also M4A, AAC, FLAC, WAV? | **MP3 first** |
-| Q5 | Should songs play in filename order, folder order, or shuffled order by default? | **Assume** filename order |
-| Q6 | Is cellular streaming acceptable? | **Assume** yes, with user control later |
+| Q5 | Should songs play in filename order, folder order, or shuffled order by default? | **Resolved:** root tracks first, relative folder paths then natural numeric filename; shuffle explicit (see [collection rules](#v01-collection-queue-and-recovery-behavior)) |
+| Q6 | Is cellular streaming acceptable? | **Resolved:** yes, enabled with data-use notice; Wi-Fi-only option later (see [recovery rules](#v01-collection-queue-and-recovery-behavior)) |
 | Q7 | Is downloading/offline listening essential? | **No**, defer |
 | Q8 | What should we call the app? | **Open** |
 | Q9 | What happens if anonymous folder listing cannot be supported reliably? | **Open**; run experiment first |
@@ -256,6 +272,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 | Q14 | Should the premium unlock specifically be unlimited playlists, and should there be a free playlist allowance? | **Open**; one-time playlist unlock is proposed, not finalized |
 | Q15 | Does v0.1 require saving and restoring custom playlists? | **Resolved:** No. Custom playlists are stretch scope, not a weekend release gate |
 | Q16 | Should lock-screen and supported headset/Bluetooth basic remote commands be P0? | **Resolved:** Yes; play/pause and next/previous required. Artwork and rich metadata optional |
+| Q17 | How should multiple saved roots, scan completion, relaunch, and temporary playback failures behave? | **Resolved by grilling Q6–Q12**; see [canonical collection, queue and recovery behavior](#v01-collection-queue-and-recovery-behavior) |
 
 ## 10. Decisions log
 
@@ -278,6 +295,13 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 | 2026-11-14 | D-015 | Make basic lock-screen/headset/Bluetooth play/pause and next/previous P0 | These are core listening controls; richer metadata/artwork remain stretch |
 | 2026-11-14 | D-016 | Skip Drive shortcuts when discovering a root folder's actual descendants | Predictable traversal scope; transparently report skipped shortcuts |
 | 2026-11-14 | D-017 | Limit v0.1 scan size and make partial results playable | Weekend stability; full thresholds and truncation behavior are centralized in the [scan boundary and limits](#v01-recursive-scan-boundary-and-limits) |
+| 2026-11-14 | D-018 | Save multiple roots; only explicit Play changes the active queue | No interruptions from selection or scanning; no merged roots |
+| 2026-11-14 | D-019 | Require settled scans before starting the new collection | Stable queue, predictable sorting/shuffle; allow incomplete results on Stop/error/limit |
+| 2026-11-14 | D-020 | Use folder-aware natural numeric order for non-shuffle playback | Keep albums grouped; see [canonical queue policy](#v01-collection-queue-and-recovery-behavior) |
+| 2026-11-14 | D-021 | Restore roots/selection, not last playback queue/position after termination | Keep cold-launch behavior minimal; do not relax background audio |
+| 2026-11-14 | D-022 | Allow cellular with data-use notice, no autoplay on folder load | Supports navigation listening; no Wi-Fi-only control yet |
+| 2026-11-14 | D-023 | Skip definitively unavailable files; retry and pause on temporary network/quota failures | Preserve place, expose Retry, avoid infinite loops |
+| 2026-11-14 | D-024 | Resume from navigation interruptions only when previously playing; no resume on user pause/disconnect | Respect user intent and iOS audio behavior |
 
 ## 11. Parking lot — ideas to revisit
 
@@ -313,6 +337,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 
 ## 15. Changelog
 
+- **2026-11-14 / v0.8:** Resolved Codex grilling Q6–Q12 and centralized root selection, scan gate, default order, cold relaunch, cellular use, playback failure recovery, and navigation interruption policy; updated issue #1, requirements R-03/R-04/R-09/R-10/R-14–R-16 and decisions D-018–D-024.
 - **2026-11-14 / v0.7:** Resolved grilling Q3–Q5: basic lock-screen/headset Bluetooth commands are P0; Drive shortcuts are excluded/reported; centralized bounded scan limits with playable incomplete results. Updated R-02/R-07/R-08/R-14 and decisions D-015–D-017.
 - **2026-11-14 / v0.6:** Resolved grilling decisions: authorized restricted developer API-key fallback if no-key fails; aligned release gate so saved custom playlists are stretch, not required for v0.1 success. No changes to the single platform baseline or the single monetization proposal.
 - **2026-11-14 / v0.5:** Recorded free-to-download direction and tentative one-time paid playlist unlock as R-13 / D-012, with price and commercial rules in a single section. Preserved free recursive folder playback, shuffle and background navigation; deferred real IAP billing until App Store distribution work.
