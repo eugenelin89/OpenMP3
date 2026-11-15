@@ -1,7 +1,7 @@
 # Public Google Drive Music Player — Living Brainstorm
 
 > **Status:** OpenMP3 v0.1 weekend prototype kickoff; implementation unverified  
-> **Version:** 0.5 (document revision; not the app release version)  
+> **Version:** 0.6 (document revision; not the app release version)  
 > **App release target:** 0.1 — experimental iPhone weekend prototype  
 > **GitHub kickoff issue:** [#1 — OpenMP3 v0.1](https://github.com/eugenelin89/OpenMP3/issues/1)  
 > **Created:** 2026-11-14  
@@ -14,7 +14,8 @@
 - **Single kickoff issue:** [GitHub #1 — OpenMP3 v0.1 weekend prototype](https://github.com/eugenelin89/OpenMP3/issues/1). Use this as the entry point for the installed Matt Pocock/Codex workflow; let that workflow break the work into small implementation tickets.
 - **Release goal:** One demonstrably working native iPhone player for public Drive-folder MP3 streaming; no production-grade roadmap, backend, login, or App Store release required.
 - **Build order:** First validate anonymous recursive discovery and playback, preferably without an API key. If that is unreliable, document the blocker and evaluate an official API-based fallback. Then deliver the retro player, folder queue, shuffle, and **required background/lock-screen playback while another app (especially Google Maps navigation) is foregrounded**; add local custom playlists as capacity allows.
-- **Time-boxing principle:** Preserve a playable vertical slice even if stretch features remain unfinished. Clearly distinguish tested behavior from aspirations.
+- **Time-boxing principle:** Preserve a playable vertical slice even if stretch features remain unfinished. **Saved custom playlists are optional for v0.1 sign-off**, as is premium entitlement simulation. Core release requires recursive folder playback, transport/seek/shuffle/repeat, retro UI, verified background audio during navigation, and compatibility with the single platform baseline. Clearly distinguish tested behavior from aspirations.
+- **API-key decision:** Try no-key access first. If it fails, an appropriately restricted **developer-configured API key** is an accepted discovery fallback; no listener OAuth, account, or backend. Verify content streaming and seeking separately. Stop and revisit the product promise if both approaches fail.
 - **Scope authority:** This document remains the detailed ideas/requirements log; issue #1 defines the executable weekend-prototype checklist. The **app release target v0.1** is separate from this document's revision number. Keep all concrete platform versions and device-model targets **only** in the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth); other sections and GitHub issues link to it.
 
 ## Platform compatibility baseline (single source of truth)
@@ -54,7 +55,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 
 1. **Link-first:** The public folder URL is the primary input.
 2. **No account required:** No Google OAuth, no app account, no sign-up for the initial version.
-3. **No API key initially:** Investigate whether public-link discovery and streaming can work without the official Google Drive API. This is a *hypothesis to validate*, not a proven capability.
+3. **No API key initially:** Investigate no-key access first; if it is unsupported or brittle, a developer-configured restricted Drive API key is an approved fallback. Neither public-folder listing nor media streaming is assumed to work until tested. No listener OAuth or account.
 4. **Native iPhone experience:** SwiftUI interface, background audio, lock-screen controls, and compatibility with the [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth).
 5. **Nostalgic but usable:** Capture the compact, tactile, classic Winamp 2.x feel while meeting modern iPhone touch, accessibility, and background-audio needs; do not reuse Winamp logos, copyrighted skin assets, or trademarks as app branding.
 6. **Folder-first listening:** One pasted root folder can act as a complete library, including nested folders; custom playlists add curation without requiring reorganization in Drive.
@@ -115,7 +116,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 | R-02 | **Discover MP3s recursively** in the root and every accessible nested subfolder | Core | Confirmed | A test tree with three nesting levels lists each eligible MP3 once, including deep descendants; non-audio files are excluded |
 | R-03 | **Folder mode**: play the loaded folder tree as one collection | Core | Confirmed | Play All creates a queue from the recursive collection and automatically advances through it |
 | R-04 | Shuffle the folder collection and custom playlists | Core | Confirmed | Shuffle changes track order across the relevant queue; no repeats in a cycle until exhausted unless repeat behavior says otherwise |
-| R-05 | Create and manage **custom in-app playlists** | Core | Confirmed | Users can name, save, add/remove tracks, reorder and play playlists; they persist after app restart |
+| R-05 | Create and manage **custom in-app playlists** | Stretch for v0.1; future planned capability | User goal confirmed; **not a v0.1 completion gate** | When built, users can name, save, add/remove tracks, reorder and play playlists; they persist after app restart |
 | R-06 | **Classic Winamp-inspired** UI | Core | Confirmed direction | Primary playback screen visibly follows the retro design direction and remains operable with iPhone touch and accessibility controls |
 | R-07 | Music-player transport: play/pause, next/previous, seek, volume where supported, repeat off/all/one | Core | Confirmed general capability; details proposed | Controls affect the active queue predictably, including at its beginning/end |
 | R-08 | **Keep music playing while another app is foregrounded, especially Google Maps navigation**; also support locked-screen audio and headset/Bluetooth controls | Core / P0 | **Confirmed** | Start playback, switch to Google Maps and use navigation; the current track keeps playing, next tracks auto-advance, and playback remains available when locked. Navigation prompts and interruptions are handled with system-appropriate duck/pause/resume behavior. Verify on physical hardware; see background-audio scenario below |
@@ -197,7 +198,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 
 **Acceptance criteria:**
 
-- [ ] Paste the URL without Google login or an API key.
+- [ ] Paste the URL without Google login; try no-key first, but a restricted **developer** API key is acceptable if necessary.
 - [ ] List all expected MP3 filenames **recursively**, retaining relative folder paths, and report any subfolders that could not be scanned.
 - [ ] Play the first track audibly on iPhone.
 - [ ] Seek within the track and play the next track.
@@ -211,8 +212,8 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 **Decision gate:**
 
 - **Pass:** Continue with no-key native MVP.
-- **Partial pass:** Identify what is blocked (listing vs. retrieving vs. streaming); consider a minimal fallback.
-- **Fail:** Revisit API-backed discovery or revise the product promise. Do **not** assume an undocumented workaround will remain reliable.
+- **Partial pass:** Identify what is blocked (listing vs. retrieving vs. streaming); use the pre-approved restricted developer API-key fallback for public discovery and validate media streaming independently.
+- **Fail:** If both no-key and restricted developer-key approaches fail without listener login or a backend, **stop** and revisit the product promise. Do **not** assume an undocumented workaround will remain reliable.
 
 ## 8. Privacy, reliability, and distribution
 
@@ -228,7 +229,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 | ID | Question | Initial assumption / status |
 | --- | --- | --- |
 | Q1 | Is this strictly for personal use, or a public App Store product? | **Open**; prototype for personal use first |
-| Q2 | Must the app work with *zero* API keys, or is that only a preference? | **Preference:** try zero-key first |
+| Q2 | Must the app work with *zero* API keys, or is that only a preference? | **Resolved:** Try zero-key first; developer-configured restricted key is an accepted fallback |
 | Q3 | Are all audio files directly in one folder, or are subfolders important? | **Resolved:** Recursive discovery is a core user requirement |
 | Q4 | MP3 only, or also M4A, AAC, FLAC, WAV? | **MP3 first** |
 | Q5 | Should songs play in filename order, folder order, or shuffled order by default? | **Assume** filename order |
@@ -241,6 +242,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 | Q12 | Should shuffle avoid repeats until every track has played, and should it remember state? | **Proposed** behavior in R-04; confirm in testing |
 | Q13 | What degree of Winamp likeness is desired (classic fixed-size panels versus a touch-adapted homage)? | **Open**; create visual mockups before coding |
 | Q14 | Should the premium unlock specifically be unlimited playlists, and should there be a free playlist allowance? | **Open**; one-time playlist unlock is proposed, not finalized |
+| Q15 | Does v0.1 require saving and restoring custom playlists? | **Resolved:** No. Custom playlists are stretch scope, not a weekend release gate |
 
 ## 10. Decisions log
 
@@ -258,6 +260,8 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 | 2026-11-14 | D-010 | Require music to keep playing when Google Maps navigation is in the foreground | Explicit user requirement; prioritize background audio in P0 |
 | 2026-11-14 | D-011 | Centralize all explicit platform/device versions in one [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth) | Explicit user preference; avoid documentation drift and simplify future changes |
 | 2026-11-14 | D-012 | Keep core OpenMP3 free; consider a small, one-time IAP for custom playlists | User requested free app with an optional low-cost purchase; exact paid feature/price remain tentative (see [monetization proposal](#monetization-proposal-single-source-of-truth-for-commercial-terms)) |
+| 2026-11-14 | D-013 | Developer-restricted Drive API key is an accepted fallback if the no-key path fails | Keep the listener's paste-link experience; require separate proof of streaming and stop before OAuth/backend |
+| 2026-11-14 | D-014 | Custom playlists are optional stretch for the v0.1 weekend release | Remove conflict between P1 and mandatory acceptance, prioritize a playable end-to-end app |
 
 ## 11. Parking lot — ideas to revisit
 
@@ -293,6 +297,7 @@ A public Drive folder is easy to share, but it is not a convenient music playlis
 
 ## 15. Changelog
 
+- **2026-11-14 / v0.6:** Resolved grilling decisions: authorized restricted developer API-key fallback if no-key fails; aligned release gate so saved custom playlists are stretch, not required for v0.1 success. No changes to the single platform baseline or the single monetization proposal.
 - **2026-11-14 / v0.5:** Recorded free-to-download direction and tentative one-time paid playlist unlock as R-13 / D-012, with price and commercial rules in a single section. Preserved free recursive folder playback, shuffle and background navigation; deferred real IAP billing until App Store distribution work.
 - **2026-11-14 / v0.4:** Made Google Maps foreground navigation/background playback an explicit P0 requirement with a device test. Added R-12 and one canonical [platform compatibility baseline](#platform-compatibility-baseline-single-source-of-truth) for minimum OS and legacy reference device; other sections and Issue #1 link rather than duplicate versions.
 - **2026-11-14 / v0.3:** Reframed OpenMP3 **app v0.1** as a weekend experiment, linked GitHub kickoff issue #1, and separated the app release number from the living document revision. Prioritized feasibility and a playable vertical slice before polish.
