@@ -1,0 +1,362 @@
+{
+  "controls" : {
+    "folders" : 100,
+    "listingRequests" : 60,
+    "retriesPerRequest" : 1,
+    "retryDelay" : 1,
+    "seconds" : 180,
+    "totalRetries" : 2,
+    "tracks" : 1000
+  },
+  "discoveredTracks" : 47,
+  "duplicateFilenameGroups" : 0,
+  "gate" : "OPEN — representative discovery and scan-budget evidence unresolved",
+  "media" : [
+
+  ],
+  "mode" : "anonymous-no-key",
+  "nativeAudio" : "not tested by this network command",
+  "requests" : [
+    {
+      "bytes" : 348089,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "root page",
+      "redirects" : 0,
+      "seconds" : 2.206305874977261,
+      "status" : 200
+    },
+    {
+      "bytes" : 347965,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.05000254168408,
+      "status" : 200
+    },
+    {
+      "bytes" : 320795,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.1722241666866466,
+      "status" : 200
+    },
+    {
+      "bytes" : 370283,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.2702520416351035,
+      "status" : 200
+    },
+    {
+      "bytes" : 516453,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 3.16229662502883,
+      "status" : 200
+    },
+    {
+      "bytes" : 316651,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 1.9812143333256245,
+      "status" : 200
+    },
+    {
+      "bytes" : 330030,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.16178683337057,
+      "status" : 200
+    },
+    {
+      "bytes" : 447379,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.6780140416813083,
+      "status" : 200
+    },
+    {
+      "bytes" : 458124,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.762612958322279,
+      "status" : 200
+    },
+    {
+      "bytes" : 367227,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.1921728333691135,
+      "status" : 200
+    },
+    {
+      "bytes" : 320864,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.11547087499639,
+      "status" : 200
+    },
+    {
+      "bytes" : 311854,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 1.9238214166252874,
+      "status" : 200
+    },
+    {
+      "bytes" : 412778,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.442439333361108,
+      "status" : 200
+    },
+    {
+      "bytes" : 282844,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 1.7855996250291355,
+      "status" : 200
+    },
+    {
+      "bytes" : 282529,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 1.820162916672416,
+      "status" : 200
+    },
+    {
+      "bytes" : 282665,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 1.854370208340697,
+      "status" : 200
+    },
+    {
+      "bytes" : 282779,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 1.8990795833524317,
+      "status" : 200
+    },
+    {
+      "bytes" : 445755,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.7209632917074487,
+      "status" : 200
+    },
+    {
+      "bytes" : 313004,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 1.9408123749890365,
+      "status" : 200
+    },
+    {
+      "bytes" : 433924,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.701744083315134,
+      "status" : 200
+    },
+    {
+      "bytes" : 313023,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.0106629166402854,
+      "status" : 200
+    },
+    {
+      "bytes" : 323324,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.1279778750031255,
+      "status" : 200
+    },
+    {
+      "bytes" : 386100,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.4620109166717157,
+      "status" : 200
+    },
+    {
+      "bytes" : 313710,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 1.9976018333691172,
+      "status" : 200
+    },
+    {
+      "bytes" : 312986,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 1.9443772917147726,
+      "status" : 200
+    },
+    {
+      "bytes" : 312939,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.1016205416526645,
+      "status" : 200
+    },
+    {
+      "bytes" : 313183,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.084280541690532,
+      "status" : 200
+    },
+    {
+      "bytes" : 313036,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.3263712499756366,
+      "status" : 200
+    },
+    {
+      "bytes" : 313134,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 1.9600483333342709,
+      "status" : 200
+    },
+    {
+      "bytes" : 313017,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 1.9335087916697375,
+      "status" : 200
+    },
+    {
+      "bytes" : 313421,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.3674592083552852,
+      "status" : 200
+    },
+    {
+      "bytes" : 313266,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.080306208343245,
+      "status" : 200
+    }
+  ],
+  "scan" : {
+    "elapsedSeconds" : 70.30139745835913,
+    "folders" : 31,
+    "ignoredFiles" : 54,
+    "listingRequests" : 31,
+    "metadataRequests" : 1,
+    "reasons" : [
+      "Undocumented webpage: pagination and descendant resource keys unverified",
+      "Unreadable descendant at depth 3; accessible siblings retained",
+      "Unreadable descendant at depth 3; accessible siblings retained",
+      "Unreadable descendant at depth 3; accessible siblings retained",
+      "Unreadable descendant at depth 3; accessible siblings retained"
+    ],
+    "retries" : 0,
+    "shortcuts" : 0,
+    "state" : "incomplete"
+  },
+  "schema" : 2,
+  "tracksByDepth" : {
+    "3" : 47
+  }
+}

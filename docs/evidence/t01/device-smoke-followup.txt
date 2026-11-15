@@ -1,0 +1,63 @@
+OpenMP3 T01 — gate OPEN
+Device: iPhone; OS: 26.5.2
+Physical device / exact model: RECORD MANUALLY (simulator is not physical evidence)
+Audio route: Speaker
+Access: anonymous-no-key
+First track: not tested; seek: not tested; second track: not tested; natural next: not tested
+Scan: incomplete; tracks: 15; requests: 3; elapsed: 8.272198375081643
+Native events:
+Load queue item 1
+Native item ready; audible playback unconfirmed
+Seek completed: requested 106.3s, actual 106.3s
+Seek completed: requested 208.7s, actual 208.7s
+Natural end of queue item 1
+Load queue item 2
+Native item ready; audible playback unconfirmed
+Listing HTTP observations (AVPlayer traffic is separate):
+[
+  {
+    "bytes" : 320909,
+    "contentType" : "text\/html",
+    "finalHost" : "drive.google.com",
+    "prefixOnly" : false,
+    "purpose" : "root page",
+    "redirects" : 0,
+    "seconds" : 1.873098500072956,
+    "status" : 200
+  },
+  {
+    "bytes" : 320710,
+    "contentType" : "text\/html",
+    "finalHost" : "drive.google.com",
+    "prefixOnly" : false,
+    "purpose" : "folder listing",
+    "redirects" : 0,
+    "seconds" : 1.8809516250621527,
+    "status" : 200
+  },
+  {
+    "bytes" : 450661,
+    "contentType" : "text\/html",
+    "finalHost" : "drive.google.com",
+    "prefixOnly" : false,
+    "purpose" : "folder listing",
+    "redirects" : 0,
+    "seconds" : 2.703322625020519,
+    "status" : 200
+  },
+  {
+    "bytes" : 312983,
+    "contentType" : "text\/html",
+    "finalHost" : "drive.google.com",
+    "prefixOnly" : false,
+    "purpose" : "folder listing",
+    "redirects" : 0,
+    "seconds" : 1.7947616251185536,
+    "status" : 200
+  }
+]
+Legacy compatibility, Maps, interruptions and remote controls: NOT TESTED
+Automated native procedure:
+PASS: first native item progressed; audibility requires human confirmation
+PASS: native midpoint seek completed and playback progressed afterward
+PASS: natural end advanced to second native item and time progressed; audibility requires human confirmation
