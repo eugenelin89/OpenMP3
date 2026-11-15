@@ -30,8 +30,8 @@ sdk = subprocess.check_output(['xcrun', '--sdk', 'iphoneos', '--show-sdk-path'],
 subprocess.run(['xcrun', '--sdk', 'iphoneos', 'swiftc', '-parse-as-library', '-target', 'arm64-apple-ios' + minimum,
                 '-sdk', sdk, '-module-cache-path', str(root / '.build/ios-module-cache'),
                 *map(str, sorted((root / 'Sources/ProbeCore').glob('*.swift'))),
-                str(root / 'ProbeApp/ProbeApp.swift'), '-o', str(out / 'OpenMP3Probe')], check=True)
-info = plistlib.loads((root / 'ProbeApp/Info.plist').read_bytes())
+                *map(str, sorted((root / 'ProbeApp').glob('*.swift'))), '-o', str(out / 'OpenMP3Probe')], check=True)
+info = plistlib.loads((root / 'ProbeApp/GeneratedInfo.plist').read_bytes())
 info.update(CFBundleExecutable='OpenMP3Probe', CFBundleIdentifier=bundle, MinimumOSVersion=minimum,
             CFBundleSupportedPlatforms=['iPhoneOS'], UIDeviceFamily=[1])
 (out / 'Info.plist').write_bytes(plistlib.dumps(info))

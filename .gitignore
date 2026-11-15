@@ -5,3 +5,4 @@ ProbeApp/DeveloperConfig.plist
 ProbeApp/*.xcodeproj/
 probe-runs/
 *.xcuserstate
+ProbeApp/GeneratedInfo.plist

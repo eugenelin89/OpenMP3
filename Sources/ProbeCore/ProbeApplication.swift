@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-public struct RootFolder: Equatable {
+public struct RootFolder: Equatable, Hashable, Codable {
     public let id: String
     public let resourceKey: String?
 }
@@ -12,60 +12,30 @@ public struct RootFolder: Equatable {
     @Published public private(set) var tracks: [DiscoveredTrack] = []
     @Published public private(set) var failedFolderPaths: [[String]] = []
     @Published public private(set) var scanObservation = ScanObservation()
-    @Published public private(set) var playback = PlaybackObservation()
-    private let audio: AudioOutput?
-    private let drive: DriveAccess?
+    @Published public internal(set) var playback = PlaybackObservation() { didSet { audio?.updateNowPlaying(playback) } }
+    @Published public private(set) var savedRoots: [SavedRoot] = []
+    @Published public private(set) var storageError: String?
+    private let storage: RootStorage?
+    private var collections: [RootFolder: SessionCollection] = [:]
+    var interrupted = false
+    let shuffled: ([DiscoveredTrack]) -> [DiscoveredTrack]
+    let audio: AudioOutput?
+    let drive: DriveAccess?
     private let now: () -> Double
     private var scanTask: Task<Void, Never>?
     private var stopReason = "Scan stopped"
-    public init(drive: DriveAccess? = nil, audio: AudioOutput? = nil, now: @escaping () -> Double = { ProcessInfo.processInfo.systemUptime }) {
+    public init(drive: DriveAccess? = nil, audio: AudioOutput? = nil, now: @escaping () -> Double = { ProcessInfo.processInfo.systemUptime }, shuffled: @escaping ([DiscoveredTrack]) -> [DiscoveredTrack] = { $0.shuffled() }, storage: RootStorage? = nil) {
+        self.storage = storage
+        self.shuffled = shuffled
         self.drive = drive; self.audio = audio; self.now = now
+        audio?.onCommand = { [weak self] command in self?.handle(command) }
         audio?.onEvent = { [weak self] event in self?.receive(event) }
-    }
-    public func playAll() {
-        guard scanObservation.state == "complete" || scanObservation.state == "incomplete", !tracks.isEmpty, audio != nil else { return }
-        playback = PlaybackObservation()
-        playback.queueSource = selectedRoot
-        playback.queue = tracks
-        startCurrent()
-    }
-    public func seek(seconds: Double) {
-        guard playback.current != nil, seconds.isFinite, seconds >= 0, playback.duration > 0 else { return }
-        audio?.seek(seconds: min(seconds, playback.duration))
-    }
-    public func pause() { audio?.pause(); playback.state = "paused" }
-    public func next() {
-        guard playback.current != nil else { return }
-        playback.index += 1
-        if playback.current == nil { audio?.pause(); playback.state = "ended" }
-        else { startCurrent() }
-    }
-    private func startCurrent() {
-        guard let current = playback.current, let audio, let drive else { return }
-        playback.seconds = 0; playback.duration = 0; playback.state = "loading"
-        playback.events.append("Load queue item \(playback.index + 1)")
-        do { try audio.start(url: drive.mediaURL(current), id: current.id) }
-        catch { playback.state = "failed"; playback.events.append("Media access failed") }
-    }
-    public func receive(_ event: AudioEvent) {
-        guard event.id == playback.current?.id else { return }
-        switch event {
-        case let .ready(_, duration):
-            playback.duration = duration.isFinite ? duration : 0
-            playback.events.append("Native item ready; audible playback unconfirmed")
-        case let .progress(_, seconds):
-            guard seconds.isFinite else { return }
-            if seconds > playback.seconds, playback.state != "paused" { playback.state = "playing" }
-            playback.seconds = seconds
-        case .ended:
-            playback.events.append("Natural end of queue item \(playback.index + 1)")
-            next()
-        case .failed:
-            audio?.pause(); playback.state = "failed"
-            playback.events.append("Native playback failed; inspect device evidence")
-        case let .seeked(_, requested, actual, finished):
-            playback.events.append(String(format: "Seek %@: requested %.1fs, actual %.1fs", finished ? "completed" : "failed", requested, actual))
-        }
+        do {
+            if let state = try storage?.load() {
+                savedRoots = state.roots.filter { Self.validIdentifier($0.root.id) && ($0.root.resourceKey.map(Self.validIdentifier) ?? true) }
+                selectedRoot = savedRoots.first { $0.id == state.selectedID }?.root
+            }
+        } catch { storageError = "Saved folders could not be restored." }
     }
     public func stopScan(backgrounded: Bool = false) {
         stopReason = backgrounded ? "App left foreground" : "Scan stopped"
@@ -150,6 +120,7 @@ public struct RootFolder: Equatable {
         }
         scanObservation.elapsedSeconds = max(0, now() - started)
         scanObservation.state = scanObservation.reasons.isEmpty ? "complete" : "incomplete"
+        collections[root] = SessionCollection(tracks: tracks, scan: scanObservation, failedPaths: failedFolderPaths, error: error)
     }
 
     private struct ScanLimit: Error { let reason: String }
@@ -216,8 +187,49 @@ public struct RootFolder: Equatable {
         } else { return }
         let key = keys.first?.value
         guard let id, Self.validIdentifier(id), keys.isEmpty || (key.map(Self.validIdentifier) ?? false) else { return }
-        selectedRoot = RootFolder(id: id, resourceKey: key)
+        let root = RootFolder(id: id, resourceKey: key)
+        selectedRoot = root
         error = nil
+        if let cached = collections[root] {
+            tracks = cached.tracks; scanObservation = cached.scan
+            failedFolderPaths = cached.failedPaths; error = cached.error
+        }
+        persistRoots()
+    }
+
+    public var selectedRootName: String {
+        guard let selectedRoot else { return "No folder selected" }
+        return savedRoots.first { $0.id == selectedRoot.id }?.name ?? "Unsaved folder"
+    }
+    public func saveSelectedRoot(name: String) {
+        guard let selectedRoot else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let existing = savedRoots.first { $0.id == selectedRoot.id }
+        let label = trimmed.isEmpty ? (existing?.name ?? "Folder \(savedRoots.count + 1)") : String(trimmed.prefix(120))
+        savedRoots.removeAll { $0.id == selectedRoot.id }
+        savedRoots.append(SavedRoot(root: selectedRoot, name: label))
+        persistRoots()
+    }
+    public func selectSavedRoot(id: String) {
+        guard let saved = savedRoots.first(where: { $0.id == id }) else { return }
+        selectRoot(saved.root.link)
+    }
+    public func removeSavedRoot(id: String) {
+        guard scanObservation.state != "scanning", scanTask == nil else { return }
+        savedRoots.removeAll { $0.id == id }
+        collections = collections.filter { $0.key.id != id }
+        if selectedRoot?.id == id {
+            selectedRoot = nil; tracks = []; failedFolderPaths = []; error = nil
+            scanObservation = ScanObservation()
+        }
+        persistRoots()
+    }
+    private func persistRoots() {
+        var state = SavedRootState()
+        state.roots = savedRoots
+        state.selectedID = selectedRoot?.id
+        do { try storage?.save(state); storageError = nil }
+        catch { storageError = "Saved folders could not be stored." }
     }
 
     static func validIdentifier(_ value: String) -> Bool {
