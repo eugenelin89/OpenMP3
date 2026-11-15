@@ -42,7 +42,9 @@ public struct PlaybackObservation {
     public var index = 0
     public var seconds: Double = 0
     public var duration: Double = 0
-    var history: [Int] = []
+    var history: [String] = []
+    var highWaterIndex = 0
+    var lastEndedID: String?
     var historyPosition = 0
     var wantsPlayback = false
     public var events: [String] = []

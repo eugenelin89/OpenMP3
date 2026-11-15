@@ -4,18 +4,27 @@ extension ProbeApplication {
     public var canPlayCollection: Bool {
         ["complete", "incomplete"].contains(scanObservation.state) && !tracks.isEmpty
     }
-    public func playAll() { if let first = tracks.first { playTrack(id: first.id) } }
+    public var isPlaybackRequested: Bool { playback.wantsPlayback }
+    public func playAll() {
+        guard canPlayCollection, audio != nil else { return }
+        beginQueue(playback.shuffle ? shuffled(tracks) : tracks, starting: 0)
+    }
     public func playTrack(id: String) {
         guard canPlayCollection, let index = tracks.firstIndex(where: { $0.id == id }), audio != nil else { return }
+        let ordered = playback.shuffle ? [tracks[index]] + shuffled(tracks.filter { $0.id != id }) : tracks
+        beginQueue(ordered, starting: playback.shuffle ? 0 : index)
+    }
+    private func beginQueue(_ ordered: [DiscoveredTrack], starting index: Int) {
         let shuffle = playback.shuffle, repeatMode = playback.repeatMode
         playback = PlaybackObservation()
         playback.shuffle = shuffle; playback.repeatMode = repeatMode
         playback.canonicalQueue = tracks
         playback.queueSource = selectedRoot
         playback.sourceName = selectedRootName
-        playback.queue = shuffle ? [tracks[index]] + shuffled(tracks.filter { $0.id != id }) : tracks
-        playback.index = shuffle ? 0 : index
-        playback.history = [playback.index]
+        playback.queue = ordered
+        playback.index = index
+        playback.highWaterIndex = index
+        playback.history = [ordered[index].id]
         playback.wantsPlayback = true
         startCurrent()
     }
@@ -25,7 +34,7 @@ extension ProbeApplication {
         guard !interrupted else { return }
         if playback.needsRetry { retryPlayback(); return }
         if playback.current == nil || playback.state == "unavailable" {
-            newCycle()
+            newCycle(avoiding: playback.lastEndedID)
         } else {
             do { try audio?.resume(); playback.state = "playing" }
             catch { recoverTemporaryFailure() }
@@ -44,31 +53,46 @@ extension ProbeApplication {
     }
     public func next() {
         guard let previous = playback.current else { return }
-        if playback.historyPosition + 1 < playback.history.count {
+        while playback.historyPosition + 1 < playback.history.count {
             playback.historyPosition += 1
-            playback.index = playback.history[playback.historyPosition]
-        } else {
-            playback.index += 1
-            while let track = playback.current, playback.unavailableIDs.contains(track.id) { playback.index += 1 }
-            if playback.current != nil {
-                playback.history.append(playback.index)
-                playback.historyPosition = playback.history.count - 1
-            }
+            if activateHistoryTrack(playback.history[playback.historyPosition]) { return }
         }
-        if playback.current == nil {
+        playback.index = playback.highWaterIndex + 1
+        while let track = playback.current, playback.unavailableIDs.contains(track.id) { playback.index += 1 }
+        if let current = playback.current {
+            playback.highWaterIndex = playback.index
+            playback.history.append(current.id)
+            playback.historyPosition = playback.history.count - 1
+            startCurrent()
+        } else {
+            playback.lastEndedID = previous.id
             if playback.repeatMode == .all { newCycle(avoiding: previous.id) }
             else { audio?.pause(); playback.wantsPlayback = false; playback.state = "ended" }
         }
-        else { startCurrent() }
     }
     public func previous() {
         guard playback.current != nil else { return }
-        if playback.seconds >= 3 || playback.historyPosition == 0 { seek(seconds: 0) }
-        else {
+        if playback.seconds >= 3 || playback.historyPosition == 0 { seek(seconds: 0); return }
+        let originalPosition = playback.historyPosition
+        while playback.historyPosition > 0 {
             playback.historyPosition -= 1
-            playback.index = playback.history[playback.historyPosition]
-            startCurrent()
+            if activateHistoryTrack(playback.history[playback.historyPosition]) { return }
         }
+        playback.historyPosition = originalPosition
+        seek(seconds: 0)
+    }
+    private func activateHistoryTrack(_ id: String) -> Bool {
+        guard !playback.unavailableIDs.contains(id), let index = playback.queue.firstIndex(where: { $0.id == id }) else { return false }
+        // A replay from an older cycle becomes visited in this cycle, so a later
+        // shuffle cannot move the current track or automatically replay it again.
+        if index > playback.highWaterIndex {
+            let track = playback.queue.remove(at: index)
+            playback.highWaterIndex += 1
+            playback.queue.insert(track, at: playback.highWaterIndex)
+            playback.index = playback.highWaterIndex
+        } else { playback.index = index }
+        startCurrent()
+        return true
     }
     func startCurrent(preservingPosition: Bool = false, retrying: Bool = false) {
         guard let current = playback.current, let audio, let drive else { return }
@@ -87,9 +111,9 @@ extension ProbeApplication {
         case let .ready(_, duration):
             playback.duration = duration.isFinite ? duration : 0
             playback.record("Native item ready; audible playback unconfirmed")
-            if let position = playback.resumePosition { audio?.seek(seconds: min(position, playback.duration)) }
+            if let position = playback.resumePosition { audio?.seek(seconds: playback.duration > 0 ? min(position, playback.duration) : position) }
         case let .progress(_, seconds):
-            guard seconds.isFinite else { return }
+            guard seconds.isFinite, playback.resumePosition == nil else { return }
             if seconds > playback.seconds, playback.wantsPlayback { playback.state = "playing" }
             playback.seconds = seconds
         case .ended:
@@ -106,8 +130,9 @@ extension ProbeApplication {
         case let .seeked(_, requested, actual, finished):
             playback.record(String(format: "Seek %@: requested %.1fs, actual %.1fs", finished ? "completed" : "failed", requested, actual))
             if playback.resumePosition != nil {
-                playback.resumePosition = nil
                 if finished {
+                    playback.resumePosition = nil
+                    if actual.isFinite { playback.seconds = max(0, actual) }
                     if playback.wantsPlayback && !interrupted {
                         do { try audio?.resume() } catch { recoverTemporaryFailure() }
                     }
@@ -145,7 +170,7 @@ extension ProbeApplication {
     public func setShuffle(_ enabled: Bool) {
         playback.shuffle = enabled
         guard playback.current != nil else { return }
-        let boundary = (playback.history.max() ?? playback.index) + 1
+        let boundary = playback.highWaterIndex + 1
         let prefix = Array(playback.queue.prefix(boundary))
         let rest = Array(playback.queue.dropFirst(boundary))
         let remainingIDs = Set(rest.map(\.id))
@@ -163,8 +188,9 @@ extension ProbeApplication {
             playback.queue.swapAt(0, 1)
         }
         playback.index = 0
-        playback.history = playback.queue.isEmpty ? [] : [0]
-        playback.historyPosition = 0
+        playback.highWaterIndex = 0
+        playback.history.append(playback.queue[0].id)
+        playback.historyPosition = playback.history.count - 1
         startCurrent()
     }
 }

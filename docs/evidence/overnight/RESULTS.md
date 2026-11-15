@@ -18,7 +18,7 @@ The implementation builds on [T01 draft PR #13](https://github.com/eugenelin89/O
 
 | Check | Result | Evidence and limits |
 | --- | --- | --- |
-| Application behavior suite | Pass | `swift test`: 21 tests, including six new integrated tests for transport/source independence, interruption/disconnect, shuffle/repeat, saved roots/cold launch, failures and single-item queues. Controlled Drive/audio/storage/randomness substitutes; not live-media proof. |
+| Application behavior suite | Pass | `swift test`: 23 tests, including eight new integrated tests for transport/source independence, interruption/disconnect, shuffle/repeat, saved roots/cold launch, failures and single-item queues. Controlled Drive/audio/storage/randomness substitutes; not live-media proof. |
 | iPhone SDK compilation/signing | Pass | Direct SDK build with the existing local development profile and identity. Baseline remains in the canonical brainstorm. |
 | Simulator launch/layout | Pass | Dedicated iPhone 16 simulator, iOS 26.5. Original dark player, labeled transport and selected-folder hierarchy observed. |
 | Invalid link | Pass | UI displayed invalid-folder-link feedback; collection playback remained unavailable. |
@@ -40,3 +40,9 @@ The implementation builds on [T01 draft PR #13](https://github.com/eugenelin89/O
 No issues are closed and no PRs are merged. T01/#4 and integrated T08/#11 cannot satisfy acceptance until their outstanding evidence is resolved. Optional playlists and billing remain deferred.
 
 Native integration follows Apple's [interruption guidance](https://developer.apple.com/documentation/avfaudio/handling-audio-interruptions) and [remote-command guidance](https://developer.apple.com/documentation/mediaplayer/handling-external-player-events-notifications). The installed SDK was used for API/type verification; these references are design support, not device-test evidence.
+
+## Review fixes
+
+Standards review found a recovery-position race and inconsistent transport intent presentation. Spec review additionally found first-track pinning in Shuffle All, a shuffled exhaustion-boundary repeat, and Previous history lost at repeat boundaries. Fixed all findings: recovery ignores preparatory progress until successful restoration (including failed-seek cases), UI and toggle share playback intent, full shuffle includes the first choice, exhaustion retains its boundary identity, and stable-ID history survives cycles. Targeted regressions cover these paths; the spec reviewer independently reproduced the corrected outcomes. No new access method or acceptance claim was added.
+
+The signed prototype was installed on the connected iPhone without launching playback. Installation alone is not a physical playback pass.

@@ -129,8 +129,12 @@ extension PlayerBehaviorTests {
         app.receive(.failed(id: "1")) // One immediate bounded re-prepare.
         XCTAssertEqual(app.playback.current?.id, "1")
         XCTAssertEqual(app.playback.seconds, 12)
+        app.receive(.progress(id: "1", seconds: 0)) // New item has not restored the seek yet.
         app.receive(.failed(id: "1"))
         XCTAssertEqual(app.playback.state, "failed")
+        XCTAssertEqual(app.playback.seconds, 12)
+        app.receive(.seeked(id: "1", requested: 12, actual: 0, finished: false))
+        app.receive(.progress(id: "1", seconds: 0))
         XCTAssertEqual(app.playback.seconds, 12)
         app.pause(); app.receive(.ready(id: "1", duration: 120))
         XCTAssertEqual(app.playback.state, "paused")
@@ -157,5 +161,43 @@ extension PlayerBehaviorTests {
         app.receive(.unavailable(id: "only")); app.play()
         XCTAssertEqual(app.playback.state, "unavailable")
         XCTAssertEqual(app.playback.queue.count, 1)
+    }
+}
+
+extension PlayerBehaviorTests {
+    @MainActor func testShuffleAllIncludesFirstChoiceAndInterruptionToggleMatchesIntent() async {
+        let drive = FixtureDrive()
+        drive.pages["a:"] = DrivePage(files: (1...3).map { DriveEntry(id: "\($0)", name: "\($0).mp3", mimeType: "audio/mpeg") })
+        let app = ProbeApplication(drive: drive, audio: FixtureAudio(), shuffled: { Array($0.reversed()) })
+        app.selectRoot("https://drive.google.com/drive/folders/a"); await app.scan(); app.shuffleAll()
+        XCTAssertEqual(app.playback.current?.id, "3")
+        app.handle(.interruptionBegan)
+        XCTAssertTrue(app.isPlaybackRequested)
+        app.handle(.toggle)
+        XCTAssertFalse(app.isPlaybackRequested)
+        app.handle(.interruptionEnded(shouldResume: true))
+        XCTAssertEqual(app.playback.state, "paused")
+    }
+}
+
+extension PlayerBehaviorTests {
+    @MainActor func testExhaustionShuffleBoundaryAndPreviousHistoryAcrossRepeatCycle() async {
+        let drive = FixtureDrive()
+        drive.pages["a:"] = DrivePage(files: (1...3).map { DriveEntry(id: "\($0)", name: "\($0).mp3", mimeType: "audio/mpeg") })
+        let app = ProbeApplication(drive: drive, audio: FixtureAudio(), shuffled: { Array($0.reversed()) })
+        app.selectRoot("https://drive.google.com/drive/folders/a"); await app.scan(); app.playAll()
+        app.next(); app.next(); app.setShuffle(true); app.next(); app.play()
+        XCTAssertNotEqual(app.playback.current?.id, "3")
+        app.setShuffle(false); app.playAll(); app.setRepeat(.all)
+        app.next(); app.next(); app.next()
+        XCTAssertEqual(app.playback.current?.id, "1")
+        app.previous()
+        XCTAssertEqual(app.playback.current?.id, "3")
+        app.setShuffle(true)
+        XCTAssertEqual(app.playback.current?.id, "3")
+        app.next()
+        XCTAssertEqual(app.playback.current?.id, "1")
+        app.next()
+        XCTAssertEqual(app.playback.current?.id, "2") // Historical replay of 3 is not requeued automatically.
     }
 }

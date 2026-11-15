@@ -75,7 +75,7 @@ struct PlayerScreen: View {
                 .accessibilityValue(time(seekValue))
             HStack(spacing: 12) {
                 transport("Previous", icon: "backward.end.fill") { app.previous() }
-                transport(app.playback.state == "playing" || app.playback.state == "loading" ? "Pause" : "Play", icon: app.playback.state == "playing" || app.playback.state == "loading" ? "pause.fill" : "play.fill") {
+                transport(app.isPlaybackRequested ? "Pause" : "Play", icon: app.isPlaybackRequested ? "pause.fill" : "play.fill") {
                     app.handle(.toggle)
                 }
                 transport("Next", icon: "forward.end.fill") { app.next() }
