@@ -1,0 +1,37 @@
+{
+  "procedure": "Serial live anonymous runs; first run includes separate media-range probes; no cache/cookies",
+  "runs": 3,
+  "scan_seconds": [
+    5.28485891665332,
+    5.378559416625649,
+    5.321020249975845
+  ],
+  "median_scan_seconds": 5.321020249975845,
+  "maximum_scan_seconds": 5.378559416625649,
+  "listing_requests": [
+    1,
+    1,
+    1
+  ],
+  "root_validation_requests": [
+    1,
+    1,
+    1
+  ],
+  "retries": [
+    0,
+    0,
+    0
+  ],
+  "discovered_tracks": [
+    14,
+    14,
+    14
+  ],
+  "states": [
+    "incomplete",
+    "incomplete",
+    "incomplete"
+  ],
+  "budget_claim": "Measurements only; not a representative-workload budget validation"
+}

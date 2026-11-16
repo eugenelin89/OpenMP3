@@ -1,0 +1,7 @@
+.build/
+.swiftpm/
+.DS_Store
+ProbeApp/DeveloperConfig.plist
+ProbeApp/*.xcodeproj/
+probe-runs/
+*.xcuserstate

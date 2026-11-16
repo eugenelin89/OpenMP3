@@ -1,0 +1,130 @@
+{
+  "controls": {
+    "folders": 100,
+    "listingRequests": 20,
+    "retriesPerRequest": 1,
+    "retryDelay": 1,
+    "seconds": 60,
+    "totalRetries": 2,
+    "tracks": 1000
+  },
+  "discoveryDependency": "Undocumented _DRIVE_ivd webpage schema; pagination and descendant resource keys unverified",
+  "gate": "OPEN \u2014 no measured application budgets or complete native/device evidence",
+  "media": [
+    "range retrieval passed",
+    "range retrieval passed",
+    "range retrieval passed",
+    "range retrieval passed"
+  ],
+  "mode": "anonymous-no-key",
+  "nativeAudio": "not tested by this network command",
+  "requests": [
+    {
+      "bytes": 320949,
+      "contentType": "text/html",
+      "finalHost": "drive.google.com",
+      "prefixOnly": false,
+      "purpose": "root page",
+      "redirects": 0,
+      "seconds": 2.0086968333343975,
+      "status": 200
+    },
+    {
+      "bytes": 320954,
+      "contentType": "text/html",
+      "finalHost": "drive.google.com",
+      "prefixOnly": false,
+      "purpose": "folder listing",
+      "redirects": 0,
+      "seconds": 2.0434463749988936,
+      "status": 200
+    },
+    {
+      "bytes": 445743,
+      "contentType": "text/html",
+      "finalHost": "drive.google.com",
+      "prefixOnly": false,
+      "purpose": "folder listing",
+      "redirects": 0,
+      "seconds": 2.721868958324194,
+      "status": 200
+    },
+    {
+      "bytes": 312857,
+      "contentType": "text/html",
+      "finalHost": "drive.google.com",
+      "prefixOnly": false,
+      "purpose": "folder listing",
+      "redirects": 0,
+      "seconds": 2.0378099583322182,
+      "status": 200
+    },
+    {
+      "acceptRanges": "bytes",
+      "bytes": 1024,
+      "contentRange": "bytes 0-1023/8589733",
+      "contentType": "audio/mpeg",
+      "finalHost": "drive.usercontent.google.com",
+      "prefixOnly": false,
+      "purpose": "media range at 0",
+      "redirects": 1,
+      "seconds": 1.554156124999281,
+      "status": 206
+    },
+    {
+      "acceptRanges": "bytes",
+      "bytes": 1024,
+      "contentRange": "bytes 65536-66559/8589733",
+      "contentType": "audio/mpeg",
+      "finalHost": "drive.usercontent.google.com",
+      "prefixOnly": false,
+      "purpose": "media range at 65536",
+      "redirects": 1,
+      "seconds": 1.3483985416823998,
+      "status": 206
+    },
+    {
+      "acceptRanges": "bytes",
+      "bytes": 1024,
+      "contentRange": "bytes 0-1023/8552432",
+      "contentType": "audio/mpeg",
+      "finalHost": "drive.usercontent.google.com",
+      "prefixOnly": false,
+      "purpose": "media range at 0",
+      "redirects": 1,
+      "seconds": 1.1300601666443981,
+      "status": 206
+    },
+    {
+      "acceptRanges": "bytes",
+      "bytes": 1024,
+      "contentRange": "bytes 65536-66559/8552432",
+      "contentType": "audio/mpeg",
+      "finalHost": "drive.usercontent.google.com",
+      "prefixOnly": false,
+      "purpose": "media range at 65536",
+      "redirects": 1,
+      "seconds": 1.0368240416864865,
+      "status": 206
+    }
+  ],
+  "scan": {
+    "elapsedSeconds": 8.828136416675989,
+    "folders": 3,
+    "ignoredFiles": 0,
+    "listingRequests": 3,
+    "metadataRequests": 1,
+    "reasons": [
+      "Undocumented webpage: pagination and descendant resource keys unverified"
+    ],
+    "retries": 0,
+    "shortcuts": 0,
+    "state": "incomplete"
+  },
+  "schema": 1,
+  "discoveredTracks": 15,
+  "tracksByDepth": {
+    "1": 15
+  },
+  "publicationNote": "Aggregate projection; original detailed evidence preserved locally. No measurements changed."
+}

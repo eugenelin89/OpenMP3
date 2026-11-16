@@ -1,0 +1,46 @@
+{
+  "controls" : {
+    "folders" : 100,
+    "listingRequests" : 20,
+    "retriesPerRequest" : 1,
+    "retryDelay" : 1,
+    "seconds" : 0.1,
+    "totalRetries" : 2,
+    "tracks" : 1000
+  },
+  "discoveredTracks" : 0,
+  "duplicateFilenameGroups" : 0,
+  "gate" : "OPEN — representative discovery and scan-budget evidence unresolved",
+  "media" : [
+
+  ],
+  "mode" : "anonymous-no-key",
+  "nativeAudio" : "not tested by this network command",
+  "requests" : [
+    {
+      "bytes" : 0,
+      "failure" : "cancelled",
+      "prefixOnly" : false,
+      "purpose" : "root page",
+      "redirects" : 0,
+      "seconds" : 0.10514270834391937
+    }
+  ],
+  "scan" : {
+    "elapsedSeconds" : 0.10839591664262116,
+    "folders" : 0,
+    "ignoredFiles" : 0,
+    "listingRequests" : 0,
+    "metadataRequests" : 1,
+    "reasons" : [
+      "Experimental wall-clock limit"
+    ],
+    "retries" : 0,
+    "shortcuts" : 0,
+    "state" : "incomplete"
+  },
+  "schema" : 2,
+  "tracksByDepth" : {
+
+  }
+}
