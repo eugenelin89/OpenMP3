@@ -111,7 +111,7 @@ struct PlayerScreen: View {
             if let message = app.playback.message {
                 Text(message).font(.callout).foregroundColor(.orange)
                 if app.playback.state == "failed" || app.playback.state == "paused" {
-                    Button("Retry playback") { app.retryPlayback() }.frame(minHeight: 44)
+                    Button(app.playback.ready == nil ? "Retry playback" : "Retry previous track") { app.retryPlayback() }.frame(minHeight: 44)
                 }
             }
         }
@@ -183,7 +183,7 @@ struct PlayerScreen: View {
                             Text(track.entry.name).multilineTextAlignment(.leading).foregroundColor(.primary)
                             Spacer(minLength: 0)
                         }.frame(minHeight: 44).contentShape(Rectangle())
-                    }.disabled(!app.canPlayCollection).accessibilityLabel("Play " + track.entry.name + ", " + group.label)
+                    }.accessibilityLabel("Play " + track.entry.name + ", " + group.label)
                     Divider()
                 }
             }

@@ -74,9 +74,10 @@ public struct PlaybackObservation {
     public var displaySource: String { ready.map { "Ready: " + $0.name } ?? (queue.isEmpty ? "Load a folder to prepare music" : "Queue source · " + sourceName) }
     public var canPlay: Bool { ready != nil || !queue.isEmpty }
     public var hasResumableCurrent: Bool {
-        current != nil && !["unavailable", "failed", "ended"].contains(state)
+        current != nil && !recoveryExhausted
     }
 
+    public internal(set) var recoveryExhausted = false
     public var shuffle = false
     public var repeatMode = RepeatMode.off
     public var unavailableIDs: Set<String> = []
