@@ -38,6 +38,7 @@ import MediaPlayer
         status = nil
         if let endToken { NotificationCenter.default.removeObserver(endToken) }
         if let failureToken { NotificationCenter.default.removeObserver(failureToken) }
+        let emit = onEvent
         currentID = id
         let item = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: item)
@@ -45,8 +46,8 @@ import MediaPlayer
             Task { @MainActor in
                 guard let self, let item, self.player.currentItem === item else { return }
                 switch item.status {
-                case .readyToPlay: self.onEvent?(.ready(id: id, duration: item.duration.seconds))
-                case .failed: self.reportFailure(item: item, id: id)
+                case .readyToPlay: emit?(.ready(id: id, duration: item.duration.seconds))
+                case .failed: self.reportFailure(item: item, id: id, emit: emit)
                 default: break
                 }
             }
@@ -54,19 +55,19 @@ import MediaPlayer
         endToken = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self, weak item] _ in
             Task { @MainActor in
                 guard let self, let item, self.player.currentItem === item else { return }
-                self.onEvent?(.ended(id: id))
+                emit?(.ended(id: id))
             }
         }
         failureToken = NotificationCenter.default.addObserver(forName: .AVPlayerItemFailedToPlayToEndTime, object: item, queue: .main) { [weak self, weak item] _ in
             Task { @MainActor in
                 guard let self, let item, self.player.currentItem === item else { return }
-                self.reportFailure(item: item, id: id)
+                self.reportFailure(item: item, id: id, emit: emit)
             }
         }
         timeToken = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { [weak self, weak item] time in
             Task { @MainActor in
                 guard let self, let item, self.player.currentItem === item else { return }
-                self.onEvent?(.progress(id: id, seconds: time.seconds))
+                emit?(.progress(id: id, seconds: time.seconds))
             }
         }
         if playing { player.play() }
@@ -77,7 +78,7 @@ import MediaPlayer
         #endif
         player.play()
     }
-    private func reportFailure(item: AVPlayerItem, id: String) {
+    private func reportFailure(item: AVPlayerItem, id: String, emit: ((AudioEvent) -> Void)?) {
         let error = item.error as NSError?
         let statuses = item.errorLog()?.events.map(\.errorStatusCode) ?? []
         // HTTP access/quota failures can be temporary, including Google's 403 responses.
@@ -85,15 +86,16 @@ import MediaPlayer
         let missingHTTP = statuses.contains { $0 == 404 || $0 == 410 }
         let provenDecodeFailure = error?.domain == AVFoundationErrorDomain &&
             [AVError.Code.decodeFailed.rawValue, AVError.Code.decoderNotFound.rawValue].contains(error?.code ?? 0)
-        onEvent?(!temporaryHTTP && (missingHTTP || provenDecodeFailure) ? .unavailable(id: id) : .failed(id: id))
+        emit?(!temporaryHTTP && (missingHTTP || provenDecodeFailure) ? .unavailable(id: id) : .failed(id: id))
     }
     public func pause() { player.pause() }
     public func seek(seconds: Double) {
         guard let id = currentID, let item = player.currentItem else { return }
+        let emit = onEvent
         player.seek(to: CMTime(seconds: seconds, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self, weak item] finished in
             Task { @MainActor in
                 guard let self, let item, self.player.currentItem === item else { return }
-                self.onEvent?(.seeked(id: id, requested: seconds, actual: self.player.currentTime().seconds, finished: finished))
+                emit?(.seeked(id: id, requested: seconds, actual: self.player.currentTime().seconds, finished: finished))
             }
         }
     }
