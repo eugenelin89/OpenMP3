@@ -8,7 +8,7 @@ Run `python3 scripts/generate_probe_project.py` to create the disposable Xcode p
 
 For an Apple Silicon simulator with an installed iOS runtime, run `python3 scripts/build_simulator.py`, then install `.build/simulator/OpenMP3Probe.app` with `simctl`. `scripts/build_device_probe.py` builds the same source for an iPhone using the existing profile/identity arguments described below. The historical bundle identifier is retained so the prototype updates the feasibility harness in place. Normal launch is silent. Set `OPENMP3_PROBE=1` to open the retained manual harness; automated audio smoke remains explicitly opt-in.
 
-Focused validation: `swift test`. No dependency downloads are required. Saved links remain local; collections/queue/position/modes are session-only. No fixture links or personal music metadata should be committed. [v0.2 evidence](docs/evidence/v205/RESULTS.md) separates automated checks, simulator observations, physical visual/timing checks, owner-confirmed audibility, and outstanding remote/VoiceOver acceptance. Draft PRs remain unmerged.
+Focused validation: `swift test`. No dependency downloads are required. Saved links remain local; collections/queue/position/modes are session-only. No fixture links or personal music metadata should be committed. [v0.2 evidence](docs/evidence/v205/RESULTS.md) separates automated checks, simulator observations, physical visual/timing checks, owner-confirmed audibility, and outstanding remote/VoiceOver acceptance. The prerequisite and v0.2 PR stack is merged; [post-merge verification](docs/evidence/v02-merge/RESULTS.md) records the integrated checks. Remaining physical checks are unverified; merging does not establish release acceptance.
 
 ---
 
