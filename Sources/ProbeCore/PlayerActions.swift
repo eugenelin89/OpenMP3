@@ -10,25 +10,31 @@ extension ProbeApplication {
         beginQueue(playback.shuffle ? shuffled(tracks) : tracks, starting: 0)
     }
     public func playTrack(id: String) {
-        guard canPlayCollection, let index = tracks.firstIndex(where: { $0.id == id }), audio != nil else { return }
+        guard let index = tracks.firstIndex(where: { $0.id == id }), audio != nil else { return }
+        intentGeneration = UUID()
         let ordered = playback.shuffle ? [tracks[index]] + shuffled(tracks.filter { $0.id != id }) : tracks
         beginQueue(ordered, starting: playback.shuffle ? 0 : index)
     }
-    private func beginQueue(_ ordered: [DiscoveredTrack], starting index: Int) {
+    private func beginQueue(_ ordered: [DiscoveredTrack], starting index: Int, snapshot: CollectionSnapshot? = nil, playing: Bool = true) {
         let shuffle = playback.shuffle, repeatMode = playback.repeatMode
         playback = PlaybackObservation()
         playback.shuffle = shuffle; playback.repeatMode = repeatMode
-        playback.canonicalQueue = tracks
-        playback.queueSource = selectedRoot
-        playback.sourceName = selectedRootName
+        playback.canonicalQueue = snapshot?.tracks ?? tracks
+        playback.queueSource = snapshot?.root ?? selectedRoot
+        playback.sourceName = snapshot?.name ?? selectedRootName
         playback.queue = ordered
         playback.index = index
         playback.highWaterIndex = index
         playback.history = [ordered[index].id]
-        playback.wantsPlayback = true
+        playback.wantsPlayback = playing
         startCurrent()
     }
     public func play() {
+        if let ready = playback.ready {
+            guard audio != nil else { return }
+            beginQueue(ready.order, starting: ready.index, snapshot: ready.collection)
+            return
+        }
         guard !playback.queue.isEmpty else { return }
         playback.wantsPlayback = true
         guard !interrupted else { return }
@@ -52,6 +58,21 @@ extension ProbeApplication {
         audio?.seek(seconds: target)
     }
     public func next() {
+        if playback.ready != nil {
+            let mode = playback.repeatMode
+            playback.ready?.next(repeatMode: mode)
+            return
+        }
+        if consumePending() { return }
+        advanceWithinQueue()
+    }
+    private func consumePending() -> Bool {
+        guard let pending = playback.pending else { return false }
+        beginQueue(playback.shuffle ? shuffled(pending.tracks) : pending.tracks, starting: 0,
+                   snapshot: pending, playing: playback.wantsPlayback)
+        return true
+    }
+    private func advanceWithinQueue(recovering: Bool = false) {
         guard let previous = playback.current else { return }
         while playback.historyPosition + 1 < playback.history.count {
             playback.historyPosition += 1
@@ -67,10 +88,12 @@ extension ProbeApplication {
         } else {
             playback.lastEndedID = previous.id
             if playback.repeatMode == .all { newCycle(avoiding: previous.id) }
+            else if recovering { finishRecovery(state: "unavailable", message: "No upcoming playable tracks remain. Choose a collection to try again.") }
             else { audio?.pause(); playback.wantsPlayback = false; playback.state = "ended" }
         }
     }
     public func previous() {
+        if playback.ready != nil { playback.ready?.previous(); return }
         guard playback.current != nil else { return }
         if playback.seconds >= 3 || playback.historyPosition == 0 { seek(seconds: 0); return }
         let originalPosition = playback.historyPosition
@@ -96,7 +119,14 @@ extension ProbeApplication {
     }
     func startCurrent(preservingPosition: Bool = false, retrying: Bool = false) {
         guard let current = playback.current, let audio, let drive else { return }
+        let generation = UUID()
+        audioGeneration = generation
+        audio.onEvent = { [weak self] event in
+            guard let self, self.audioGeneration == generation else { return }
+            self.receive(event)
+        }
         if !retrying { playback.retries = 0 }
+        playback.recoveryExhausted = false
         playback.needsRetry = false; playback.message = nil
         playback.resumePosition = preservingPosition && playback.seconds > 0 ? playback.seconds : nil
         if !preservingPosition { playback.seconds = 0; playback.duration = 0 }
@@ -105,7 +135,7 @@ extension ProbeApplication {
         do { try audio.start(url: drive.mediaURL(current), id: current.id, playing: playback.wantsPlayback && !interrupted && playback.resumePosition == nil) }
         catch { recoverTemporaryFailure() }
     }
-    public func receive(_ event: AudioEvent) {
+    func receive(_ event: AudioEvent) {
         guard event.id == playback.current?.id else { return }
         switch event {
         case let .ready(_, duration):
@@ -118,15 +148,15 @@ extension ProbeApplication {
             playback.seconds = seconds
         case .ended:
             playback.record("Natural end of queue item \(playback.index + 1)")
-            if playback.repeatMode == .one { startCurrent() } else { next() }
+            if consumePending() { return }
+            if playback.repeatMode == .one { startCurrent() } else { advanceWithinQueue() }
         case .failed:
             recoverTemporaryFailure()
         case .unavailable:
             if let current = playback.current { playback.unavailableIDs.insert(current.id) }
             if playback.canonicalQueue.allSatisfy({ playback.unavailableIDs.contains($0.id) }) {
-                audio?.pause(); playback.wantsPlayback = false; playback.state = "unavailable"
-                playback.message = "No playable tracks remain. Rescan or choose another collection."
-            } else { next() }
+                finishRecovery(state: "unavailable", message: "No playable tracks remain. Rescan or choose another collection.")
+            } else { advanceWithinQueue(recovering: true) }
         case let .seeked(_, requested, actual, finished):
             playback.record(String(format: "Seek %@: requested %.1fs, actual %.1fs", finished ? "completed" : "failed", requested, actual))
             if playback.resumePosition != nil {
@@ -169,18 +199,16 @@ extension ProbeApplication {
     public func setRepeat(_ mode: RepeatMode) { playback.repeatMode = mode }
     public func setShuffle(_ enabled: Bool) {
         playback.shuffle = enabled
+        playback.ready?.setShuffle(enabled, shuffled: shuffled)
         guard playback.current != nil else { return }
-        let boundary = playback.highWaterIndex + 1
-        let prefix = Array(playback.queue.prefix(boundary))
-        let rest = Array(playback.queue.dropFirst(boundary))
-        let remainingIDs = Set(rest.map(\.id))
-        playback.queue = prefix + (enabled ? shuffled(rest) : playback.canonicalQueue.filter { remainingIDs.contains($0.id) })
+        playback.queue = reorderedUpcoming(playback.queue, canonical: playback.canonicalQueue,
+                                           visitedThrough: playback.highWaterIndex,
+                                           shuffle: enabled ? shuffled : { $0 })
     }
     func newCycle(avoiding last: String? = nil) {
         let playable = playback.canonicalQueue.filter { !playback.unavailableIDs.contains($0.id) }
         guard !playable.isEmpty else {
-            playback.wantsPlayback = false; playback.state = "unavailable"
-            playback.message = "No playable tracks remain. Choose a collection to try again."
+            finishRecovery(state: "unavailable", message: "No playable tracks remain. Choose a collection to try again.")
             return
         }
         playback.queue = playback.shuffle ? shuffled(playable) : playable
@@ -198,20 +226,37 @@ extension ProbeApplication {
 extension ProbeApplication {
     public func retryPlayback() {
         guard playback.current != nil else { return }
+        if let ready = playback.ready {
+            playback.pending = ready.collection
+            playback.ready = nil
+        }
         playback.wantsPlayback = true
         playback.retries = 0
         startCurrent(preservingPosition: true, retrying: true)
     }
+    private func finishRecovery(state: String, message: String) {
+        audio?.pause()
+        audioGeneration = UUID()
+        playback.wantsPlayback = false
+        playback.recoveryExhausted = true
+        playback.state = state
+        playback.message = message
+        if let pending = playback.pending {
+            playback.pending = nil
+            playback.ready = ReadyCollection(collection: pending, order: playback.shuffle ? shuffled(pending.tracks) : pending.tracks)
+        }
+    }
     private func recoverTemporaryFailure() {
         audio?.pause()
         playback.needsRetry = true
-        if playback.retries < 1 && playback.wantsPlayback && !interrupted {
+        if !playback.wantsPlayback || interrupted {
+            playback.state = "paused"
+            playback.message = "Playback needs another attempt. Press Play or Retry when ready."
+        } else if playback.retries < 1 {
             playback.retries += 1
             startCurrent(preservingPosition: true, retrying: true)
         } else {
-            playback.wantsPlayback = false
-            playback.state = "failed"
-            playback.message = "Playback could not continue. Check your connection, then Retry."
+            finishRecovery(state: "failed", message: "Playback could not continue. Check your connection, then Retry.")
         }
     }
 }

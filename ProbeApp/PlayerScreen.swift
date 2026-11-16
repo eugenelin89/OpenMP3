@@ -70,12 +70,15 @@ struct PlayerScreen: View {
             HStack {
                 Text("OPEN / MP3").font(.headline.monospaced()).tracking(2)
                 Spacer()
-                Text(app.playback.state.uppercased()).font(.caption.monospaced()).foregroundColor(lime)
+                Text(app.playback.displayState.uppercased()).font(.caption.monospaced()).foregroundColor(lime)
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text(app.playback.current?.entry.name ?? "Ready when you are")
+                Text(app.playback.displayTrack?.entry.name ?? "Load a folder to begin")
                     .font(.title3.monospaced()).foregroundColor(lime).lineLimit(2)
-                Text("Queue source · " + app.playback.sourceName).font(.caption).foregroundColor(.white.opacity(0.8))
+                Text(app.playback.displaySource).font(.caption).foregroundColor(.white.opacity(0.8))
+                if let pending = app.playback.pending {
+                    Text("Up Next: " + pending.name).font(.callout).accessibilityIdentifier("pending-source")
+                }
                 HStack {
                     Text(time(app.playback.seconds))
                     Spacer()
@@ -93,7 +96,7 @@ struct PlayerScreen: View {
                     app.handle(.toggle)
                 }
                 transport("Next", icon: "forward.end.fill") { app.next() }
-            }.disabled(app.playback.queue.isEmpty)
+            }.disabled(!app.playback.canPlay)
             HStack {
                 Button { app.setShuffle(!app.playback.shuffle) } label: {
                     Label(app.playback.shuffle ? "Shuffle on" : "Shuffle off", systemImage: "shuffle")
@@ -108,7 +111,7 @@ struct PlayerScreen: View {
             if let message = app.playback.message {
                 Text(message).font(.callout).foregroundColor(.orange)
                 if app.playback.state == "failed" || app.playback.state == "paused" {
-                    Button("Retry playback") { app.retryPlayback() }.frame(minHeight: 44)
+                    Button(app.playback.ready == nil ? "Retry playback" : "Retry previous track") { app.retryPlayback() }.frame(minHeight: 44)
                 }
             }
         }
@@ -182,11 +185,6 @@ struct PlayerScreen: View {
             if app.scanObservation.state != .notStarted {
                 Text("\(app.scanObservation.shortcuts) shortcuts skipped").font(.caption).foregroundColor(.secondary)
             }
-            HStack {
-                Button { app.setShuffle(false); app.playAll() } label: { Label("Play all", systemImage: "play.fill") }
-                Spacer()
-                Button { app.shuffleAll() } label: { Label("Shuffle all", systemImage: "shuffle") }
-            }.buttonStyle(.bordered).disabled(!app.canPlayCollection)
             ForEach(folderGroups, id: \.path) { group in
                 Text(group.label).font(.headline).padding(.top, 6)
                 ForEach(group.tracks) { track in
@@ -196,7 +194,7 @@ struct PlayerScreen: View {
                             Text(track.entry.name).multilineTextAlignment(.leading).foregroundColor(.primary)
                             Spacer(minLength: 0)
                         }.frame(minHeight: 44).contentShape(Rectangle())
-                    }.disabled(!app.canPlayCollection).accessibilityLabel("Play " + track.entry.name + ", " + group.label)
+                    }.accessibilityLabel("Play " + track.entry.name + ", " + group.label)
                     Divider()
                 }
             }
@@ -243,8 +241,13 @@ struct PlayerScreen: View {
     private var queueSheet: some View {
         NavigationView {
             List {
+                if let pending = app.playback.pending {
+                    Section(header: Text("Up Next: " + pending.name)) {
+                        Text("This collection follows the current song or Next. It is not yet the active queue.")
+                    }
+                }
                 Section(header: Text("Queue source · " + app.playback.sourceName)) {
-                    if app.playback.queue.isEmpty { Text("Choose Play all or a track to start a queue.") }
+                    if app.playback.queue.isEmpty { Text("Load a folder, then use top Play or choose a track.") }
                     ForEach(Array(app.playback.queue.enumerated()), id: \.element.id) { index, track in
                         HStack {
                             Text("\(index + 1)").foregroundColor(.secondary).frame(minWidth: 28)
