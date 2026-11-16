@@ -1,3 +1,17 @@
+# OpenMP3 provisional player
+
+A native iPhone player for MP3s in public Google Drive folders. **No API key, OAuth or backend.** Anonymous discovery remains experimental and visibly incomplete; [T01 evidence](docs/evidence/t01/RESULTS.md) and [integrated prototype evidence](docs/evidence/overnight/RESULTS.md) distinguish verified results from open gates.
+
+The normal app opens the dark player. Paste a public folder link, optionally name it, Load, then explicitly Play all or tap a discovered track. Saved folders and the active queue have separate sheets. Browsing another root never replaces music. Audio streaming uses cellular data when available.
+
+Run `python3 scripts/generate_probe_project.py` to create the disposable Xcode project and generated app configuration. The generator reads the canonical platform and scan controls from the living brainstorm; regenerate after changing them. Open the generated project under `ProbeApp/` and select your existing development team/device. If Xcode destination components are unavailable, the direct SDK build below uses an existing compatible profile without creating credentials.
+
+For an Apple Silicon simulator with an installed iOS runtime, run `python3 scripts/build_simulator.py`, then install `.build/simulator/OpenMP3Probe.app` with `simctl`. `scripts/build_device_probe.py` builds the same source for an iPhone using the existing profile/identity arguments described below. The historical bundle identifier is retained so the prototype updates the feasibility harness in place. Normal launch is silent. Set `OPENMP3_PROBE=1` to open the retained manual harness; automated audio smoke remains explicitly opt-in.
+
+Focused validation: `swift test`. No dependency downloads are required. Saved links remain local; collections/queue/position are session-only. No fixture links or personal music metadata should be committed. Physical navigation, remote and audible acceptance remains for the documented morning check.
+
+---
+
 # OpenMP3 feasibility probe (T01)
 
 A small anonymous Google Drive → native AVPlayer experiment for [issue #4](https://github.com/eugenelin89/OpenMP3/issues/4). **The downstream implementation gate remains open.** See the [observed evidence and remaining gaps](docs/evidence/t01/RESULTS.md).
@@ -30,7 +44,7 @@ python3 scripts/generate_probe_project.py
 open ProbeApp/OpenMP3Probe.xcodeproj
 ```
 
-Select your development team, connect/unlock a provisioned iPhone, and run the `OpenMP3Probe` scheme. The generated project gets its deployment target from the canonical baseline. It can be regenerated and is ignored by Git. The app offers scan/stop, Play All, pause, next, midpoint seek and near-end seek. It displays selected root separately from queue source. Scanning and browsing never start audio; explicitly press Play All. Leaving the foreground stops discovery and leaves an existing native player alive. Background configuration is present, but navigation/interruption/remote behavior is not implemented or certified by this spike.
+Select your development team, connect/unlock a provisioned iPhone, and run the `OpenMP3Probe` scheme. The generated project gets its deployment target from the canonical baseline. It can be regenerated and is ignored by Git. With `OPENMP3_PROBE=1`, the retained harness offers scan/stop, Play All, pause, next, midpoint seek and near-end seek. It displays selected root separately from queue source. Scanning and browsing never start audio; explicitly press Play All. Leaving the foreground stops discovery and leaves an existing native player alive. The retained probe is for evidence capture. The normal player now implements native background/remote/interruption wiring, but physical navigation acceptance remains unverified.
 
 1. Paste an authorized folder link and scan. Inspect paths/counts and incomplete reasons.
 2. Press Play All and listen for the first track. Note device, OS, network and audio route.
@@ -62,4 +76,4 @@ Only use fixtures you own or are authorized to access. Do not modify the supplie
 
 Run small bounded trials with recorded controls, compare expected versus discovered identities/paths, repeat after restart and on another network, and examine missing rows/continuations before increasing bounds. Preserve root-resource-key cases and download-restricted files as separate access checks; never remove restrictions to make a test pass. Record all failure modes and explicitly untested cases. Once representative real coverage and native playback are established, derive numeric work budgets **only in the canonical scan-limits section** with measurement rationale. Until then, keep T01 and downstream gates open.
 
-Automated behavioral tests drive `ProbeApplication`, the approved application seam, with controlled Drive, audio and time dependencies. They cover discovery, boundaries, queue source separation, seek/end events and errors. They do not prove Google integration or physical audio. No saved-root persistence, playlists, shuffle, remote controls or final player UI is part of this probe; those remain downstream work.
+Automated behavioral tests drive `ProbeApplication`, the approved application seam, with controlled Drive, audio and time dependencies. They cover discovery, boundaries, queue source separation, seek/end events and errors. They do not prove Google integration or physical audio. The retained harness is separate from the normal player. The provisional player adds saved roots, shuffle/repeat and remote integration; optional playlists remain deferred.

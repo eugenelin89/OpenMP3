@@ -5,7 +5,18 @@ import ProbeCore
 #endif
 
 @main struct OpenMP3ProbeApp: App {
-    var body: some Scene { WindowGroup { ProbeView() } }
+    var body: some Scene {
+        WindowGroup {
+            if ProcessInfo.processInfo.environment["OPENMP3_RUN_SMOKE"] == "1" || ProcessInfo.processInfo.environment["OPENMP3_PROBE"] == "1" {
+                ProbeView()
+            } else { PlayerContainer() }
+        }
+    }
+}
+
+struct PlayerContainer: View {
+    @StateObject private var player = ProbeApplication(drive: AnonymousDrive(), audio: NativeAudio(), storage: LocalRootStorage())
+    var body: some View { PlayerScreen(app: player) }
 }
 
 struct ProbeView: View {

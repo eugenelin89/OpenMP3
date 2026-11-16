@@ -75,8 +75,10 @@ extension ProbeApplicationTests {
 }
 
 @MainActor final class FixtureAudio: AudioOutput {
+    var onCommand: ((PlayerCommand) -> Void)?
     var onEvent: ((AudioEvent) -> Void)?
-    func start(url: URL, id: String) throws { onEvent?(.ready(id: id, duration: 120)) }
+    func start(url: URL, id: String, playing: Bool) throws { onEvent?(.ready(id: id, duration: 120)) }
+    func resume() throws {}
     func pause() {}
     func seek(seconds: Double) {}
 }
