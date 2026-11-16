@@ -6,6 +6,8 @@ import XCTest
     var onEvent: ((AudioEvent) -> Void)?
     var starts: [(id: String, playing: Bool)] = []
     var callbacks: [(AudioEvent) -> Void] = []
+    var metadata: PlaybackObservation?
+    func updateNowPlaying(_ playback: PlaybackObservation) { metadata = playback }
     var resumes = 0
     var pauses = 0
     var seeks: [Double] = []

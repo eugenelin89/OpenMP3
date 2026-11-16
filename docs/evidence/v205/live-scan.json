@@ -1,0 +1,61 @@
+{
+  "controls" : {
+    "folders" : 100,
+    "listingRequests" : 20,
+    "retriesPerRequest" : 1,
+    "retryDelay" : 1,
+    "seconds" : 60,
+    "totalRetries" : 2,
+    "tracks" : 1000
+  },
+  "discoveredTracks" : 14,
+  "duplicateFilenameGroups" : 0,
+  "gate" : "OPEN — representative discovery and scan-budget evidence unresolved",
+  "media" : [
+
+  ],
+  "mode" : "anonymous-no-key",
+  "nativeAudio" : "not tested by this network command",
+  "requests" : [
+    {
+      "bytes" : 445773,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "root page",
+      "redirects" : 0,
+      "seconds" : 2.7326899166801013,
+      "status" : 200
+    },
+    {
+      "bytes" : 445824,
+      "contentType" : "text\/html",
+      "finalHost" : "drive.google.com",
+      "prefixOnly" : false,
+      "purpose" : "folder listing",
+      "redirects" : 0,
+      "seconds" : 2.7438077083206736,
+      "status" : 200
+    }
+  ],
+  "scan" : {
+    "coverageNotices" : [
+      "Undocumented webpage: pagination and descendant resource keys unverified"
+    ],
+    "elapsedSeconds" : 5.492640416661743,
+    "folders" : 1,
+    "ignoredFiles" : 0,
+    "listingRequests" : 1,
+    "metadataRequests" : 1,
+    "reasons" : [
+
+    ],
+    "retries" : 0,
+    "shortcuts" : 0,
+    "state" : "complete"
+  },
+  "schema" : 2,
+  "tracksByDepth" : {
+    "0" : 14
+  }
+}

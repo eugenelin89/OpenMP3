@@ -1,14 +1,14 @@
-# OpenMP3 provisional player
+# OpenMP3 v0.2 experimental player
 
 A native iPhone player for MP3s in public Google Drive folders. **No API key, OAuth or backend.** Anonymous discovery remains experimental. Successful scans show neutral “Scan finished” with a separate coverage notice; observed partial failures remain incomplete. [T01 evidence](docs/evidence/t01/RESULTS.md) and [integrated prototype evidence](docs/evidence/overnight/RESULTS.md) distinguish verified results from open gates.
 
-The normal app opens the dark player. Paste a public folder link, optionally name it, Load, then explicitly Play all or tap a discovered track. Saved folders and the active queue have separate sheets. Browsing another root never replaces music. Audio streaming uses cellular data when available.
+The normal app opens the dark player. Load a public folder, silently choose a ready track with Next/Previous, then press Play at the top. A new nonempty scan during playback becomes Up Next: the current song continues until its natural end or explicit Next. Paused Next stays paused. Individual track taps start immediately and supersede older scan intent. Cached-folder browsing stays passive. Saved folders and the active queue have separate sheets. Audio streaming uses cellular data when available.
 
 Run `python3 scripts/generate_probe_project.py` to create the disposable Xcode project and generated app configuration. The generator reads the canonical platform and scan controls from the living brainstorm; regenerate after changing them. Open the generated project under `ProbeApp/` and select your existing development team/device. If Xcode destination components are unavailable, the direct SDK build below uses an existing compatible profile without creating credentials.
 
 For an Apple Silicon simulator with an installed iOS runtime, run `python3 scripts/build_simulator.py`, then install `.build/simulator/OpenMP3Probe.app` with `simctl`. `scripts/build_device_probe.py` builds the same source for an iPhone using the existing profile/identity arguments described below. The historical bundle identifier is retained so the prototype updates the feasibility harness in place. Normal launch is silent. Set `OPENMP3_PROBE=1` to open the retained manual harness; automated audio smoke remains explicitly opt-in.
 
-Focused validation: `swift test`. No dependency downloads are required. Saved links remain local; collections/queue/position are session-only. No fixture links or personal music metadata should be committed. Physical navigation, remote and audible acceptance remains for the documented morning check.
+Focused validation: `swift test`. No dependency downloads are required. Saved links remain local; collections/queue/position/modes are session-only. No fixture links or personal music metadata should be committed. [v0.2 evidence](docs/evidence/v205/RESULTS.md) separates automated checks, simulator observations, physical visual/timing checks, owner-confirmed audibility, and outstanding remote/VoiceOver acceptance. Draft PRs remain unmerged.
 
 ---
 
@@ -36,6 +36,8 @@ The URL file and raw artifacts under `probe-runs/` are ignored by Git. The comma
 `--requests` and `--seconds` override **temporary experimental controls**, not measured application budgets. Each report records the controls used. Defaults live in `ExperimentControls`: bounded listing work, wall time, per-request/scan-wide retries, and size caps. Transport adds a response-size cap, finite request/resource timeouts and a redirect cap. Root-page validation is counted separately from folder listing; both are within the scan wall-time bound. Media sampling has separate bounds and is excluded from scan time. Never combine those metrics when deriving scan budgets.
 
 Normal command completion means a report was written, **not** that the feasibility gate passed. Read `scan.state`, `reasons`, `coverageNotices` and HTTP observations. The legacy serialized state `complete` means the supported scan finished; it does not certify coverage. A malformed input or local output failure exits with a nonzero status; remote failures are represented as `incomplete` or `failed` in the report.
+
+For deterministic player UI checks, build `python3 scripts/build_simulator.py --player-ui-fixture` and install `.build/player-ui/PlayerFixture.app`. Launch `org.openmp3.PlayerFixture` with `SIMCTL_CHILD_OPENMP3_PLAYER_SCENARIO` set to `empty`, `ready`, or `pending`. This separate synthetic executable uses the production screen/coordinator without network or audible output. The two fixture flags are mutually exclusive.
 
 For deterministic scan-status UI checks, build `python3 scripts/build_simulator.py --scan-ui-fixture` and install `.build/scan-ui/ScanStatusFixture.app` in a simulator. Launch bundle `org.openmp3.ScanStatusFixture` with `SIMCTL_CHILD_OPENMP3_SCAN_SCENARIO` set to `finished`, `empty`, `incomplete`, `incomplete-empty`, or `failed`. This separate executable uses the real player screen and coordinator with synthetic discovery; it has no network or audio output and is excluded from the normal app.
 

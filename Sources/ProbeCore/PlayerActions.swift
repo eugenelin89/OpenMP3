@@ -30,6 +30,7 @@ extension ProbeApplication {
         startCurrent()
     }
     public func play() {
+        guard playback.canPlay else { return }
         if let ready = playback.ready {
             guard audio != nil else { return }
             beginQueue(ready.order, starting: ready.index, snapshot: ready.collection)
@@ -52,7 +53,7 @@ extension ProbeApplication {
         if playback.current != nil { playback.state = "paused" }
     }
     public func seek(seconds: Double) {
-        guard playback.current != nil, seconds.isFinite, seconds >= 0, playback.duration > 0 else { return }
+        guard playback.canSeek, seconds.isFinite, seconds >= 0, playback.duration > 0 else { return }
         let target = min(seconds, playback.duration)
         playback.seconds = target
         audio?.seek(seconds: target)
@@ -176,10 +177,10 @@ extension ProbeApplication {
     public func handle(_ command: PlayerCommand) {
         switch command {
         case .play: play()
-        case .pause: pause()
+        case .pause: if playback.canPause { pause() }
         case .toggle: playback.wantsPlayback ? pause() : play()
-        case .next: next()
-        case .previous: previous()
+        case .next: if playback.canNext { next() }
+        case .previous: if playback.canPrevious { previous() }
         case let .seek(seconds): seek(seconds: seconds)
         case .interruptionBegan:
             interrupted = true

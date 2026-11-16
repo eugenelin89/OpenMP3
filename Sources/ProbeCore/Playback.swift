@@ -72,7 +72,17 @@ public struct PlaybackObservation {
     public var displayTrack: DiscoveredTrack? { ready?.selected ?? current }
     public var displayState: String { ready == nil ? state : "ready" }
     public var displaySource: String { ready.map { "Ready: " + $0.name } ?? (queue.isEmpty ? "Load a folder to prepare music" : "Queue source · " + sourceName) }
-    public var canPlay: Bool { ready != nil || !queue.isEmpty }
+    public var canPlay: Bool { ready != nil || canonicalQueue.contains { !unavailableIDs.contains($0.id) } }
+    public var canPause: Bool { ready == nil && current != nil && wantsPlayback }
+    public var canNext: Bool { ready != nil || pending != nil || current != nil }
+    public var canPrevious: Bool { ready != nil || current != nil }
+    public var canSeek: Bool { ready == nil && hasResumableCurrent && duration > 0 }
+    public var displaySeconds: Double { ready == nil ? seconds : 0 }
+    public var displayDuration: Double { ready == nil ? duration : 0 }
+    public var displayRate: Double { ready == nil && wantsPlayback && state == "playing" ? 1 : 0 }
+    public var displayIndex: Int { ready?.index ?? index }
+    public var displayCount: Int { ready?.order.count ?? queue.count }
+    public var displaySourceName: String { ready?.name ?? sourceName }
     public var hasResumableCurrent: Bool {
         current != nil && !recoveryExhausted
     }
