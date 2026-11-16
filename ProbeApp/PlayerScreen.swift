@@ -6,7 +6,8 @@ import ProbeCore
 struct PlayerScreen: View {
     @ObservedObject var app: ProbeApplication
     @Environment(\.scenePhase) private var phase
-    @Environment(\.dynamicTypeSize) private var typeSize
+    private enum FolderField: Hashable { case name, link }
+    @FocusState private var focusedField: FolderField?
     @State private var link = ""
     @State private var name = ""
     @State private var showingRoots = false
@@ -19,13 +20,22 @@ struct PlayerScreen: View {
 
     var body: some View {
         NavigationView {
-            Group {
-                if typeSize.isAccessibilitySize {
-                    ScrollView { VStack(spacing: 18) { player; collection }.padding() }
-                } else {
-                    VStack(spacing: 0) {
-                        player.padding()
-                        ScrollView { collection.padding([.horizontal, .bottom]) }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 18) {
+                        player
+                        collection
+                    }.padding()
+                }
+                .onChange(of: focusedField) { field in
+                    if let field {
+                        withAnimation { proxy.scrollTo(field, anchor: .center) }
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+                    // Reposition after the keyboard has reduced the visible viewport.
+                    if let focusedField {
+                        withAnimation { proxy.scrollTo(focusedField, anchor: .center) }
                     }
                 }
             }
@@ -37,7 +47,11 @@ struct PlayerScreen: View {
                     Button { showingRoots = true } label: { Label("Saved folders", systemImage: "folder") }
                         .disabled(app.scanObservation.state == "scanning")
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    if focusedField != nil {
+                        Button("Done") { focusedField = nil }
+                            .accessibilityLabel("Done editing folder")
+                    }
                     Button { showingQueue = true } label: { Label("Play queue", systemImage: "list.bullet") }
                 }
             }
@@ -128,9 +142,13 @@ struct PlayerScreen: View {
             DisclosureGroup(app.selectedRoot == nil ? "Add a public folder" : "Load another folder", isExpanded: Binding(get: { app.selectedRoot == nil || addingFolder }, set: { addingFolder = $0 })) {
                 VStack(spacing: 10) {
                     TextField("Folder name (optional)", text: $name).textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .name).id(FolderField.name)
+                        .submitLabel(.next).onSubmit { focusedField = .link }
                     TextField("Public Google Drive folder link", text: $link)
                         .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
                         .textFieldStyle(.roundedBorder).accessibilityLabel("Public folder URL")
+                        .focused($focusedField, equals: .link).id(FolderField.link)
+                        .submitLabel(.done).onSubmit { focusedField = nil }
                     Button("Load folder") { load() }.frame(maxWidth: .infinity, minHeight: 44).buttonStyle(.borderedProminent).foregroundColor(.black)
                         .disabled(link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || app.scanObservation.state == "scanning")
                 }.padding(.top, 10)
@@ -233,6 +251,7 @@ struct PlayerScreen: View {
         }.preferredColorScheme(.dark)
     }
     private func load() {
+        focusedField = nil
         app.selectRoot(link)
         guard app.selectedRoot != nil else { return }
         app.saveSelectedRoot(name: name)
