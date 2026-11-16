@@ -85,6 +85,8 @@ Current-build physical recovery-exhaustion testing is also not claimed.
 T01 discovery completeness, pagination/resource keys, representative fixtures and
 measured budget justification remain unresolved. Merge completion and passing
 automated checks do not establish release readiness or owner acceptance of these
-remaining criteria. No issue was intentionally closed, and v0.1 acceptance remains
-unchanged. Earlier draft/unmerged statements describe their original checkpoints;
+remaining criteria. GitHub automatically closed T01 #4 immediately after merging
+its prerequisite PR; it was reopened because the evidence gate remains unresolved.
+T01, the inherited implementation tickets #5–#11 and v0.2 tickets #19–#23 remain
+open. The v0.1 acceptance decision is unchanged. Earlier draft/unmerged statements describe their original checkpoints;
 this report records the later authorized integration.
