@@ -1,7 +1,8 @@
 # Issue #15: keyboard-safe folder entry
 
 Date: 2026-11-15. Base: PR #14, `0555831`. Status: simulator regression fixed;
-physical-iPhone acceptance remains **unverified**.
+core physical-iPhone keyboard checks **passed, owner-confirmed**. Accessibility
+text sizes and VoiceOver remain **unverified**.
 
 ## Reproduction and cause
 
@@ -39,12 +40,12 @@ dependency or access method is introduced.
 | Invalid input feedback | **PASS (simulator, final build):** submitting invalid text dismissed the keyboard and displayed “Invalid Google Drive folder link”. |
 | Public URL submission, no autoplay | **PASS (simulator, final build):** entered the previously authorized public fixture URL and loaded it; 14 tracks discovered, correctly marked incomplete. Player remained idle with no queue. Personal URL and track metadata omitted. |
 | Returning-user form | **PASS (simulator, final build):** after loading the fixture, opened Load another folder and focused URL; name, URL, Load and Done remained visible above the software keyboard. |
-| Queue independent of browsing | **PASS (automated core boundary):** existing tests verify scanning another root retains the active queue source and playback progression. UI edits only change local draft/focus state. Live physical playback while editing was **not tested**. |
-| Automated suite | **PASS:** `swift test`, 23 tests, zero failures. Includes invalid-link parsing, no autoplay, queue separation, saved-root restoration, and player behavior. Run before the final UI-only relocation of Done from keyboard toolbar to navigation bar; both final builds below compile that relocation. |
-| Final simulator build | **PASS:** `python3 scripts/build_simulator.py`; installed and exercised on SE simulator. |
+| Queue independent of browsing | **PASS (automated core boundary and owner-confirmed physical check):** existing tests verify scanning another root retains the active queue source and playback progression. The owner subsequently confirmed that reopening folder entry while music plays does not interrupt playback; see confirmation below. |
+| Automated suite | **PASS:** `swift test`, 23 tests, zero failures. Includes invalid-link parsing, no autoplay, queue separation, saved-root restoration, and player behavior. Rerun during the installed workflow review against final implementation commit `fea05d0`, after the Done-button relocation. |
+| Final simulator build | **PASS:** `python3 scripts/build_simulator.py`; installed and exercised on SE simulator, then rebuilt successfully during review of `fea05d0`. |
 | Final signed device build/install | **PASS:** `scripts/build_device_probe.py` with the existing local signing configuration; `devicectl` confirmed installation on the paired iPhone 16. |
-| Physical iPhone software keyboard, typing and Paste | **UNVERIFIED:** iPhone Mirroring reported “iPhone in Use. Lock your iPhone to connect.” Installation is not evidence of keyboard behavior. Owner confirmation is required. |
-| Accessibility text sizes and VoiceOver | **NOT TESTED in this pass.** Unified scroll layout preserves the prior accessibility layout structure; this is an implementation observation, not a runtime pass. |
+| Physical iPhone keyboard visibility, Paste, Done → Load | **PASS (owner-confirmed):** URL stays visible above the software keyboard, long-press Paste works, and Done → Load works without autoplay. The original agent check was unavailable because iPhone Mirroring reported the phone in use; the later owner confirmation supplies the physical evidence. |
+| Accessibility text sizes and VoiceOver | **UNVERIFIED / NOT TESTED.** Neither the owner confirmation nor the automated tests establishes these checks. Unified scrolling is an implementation observation, not a runtime accessibility pass. |
 | Oldest supported iOS runtime | **NOT TESTED:** compilation uses the canonical deployment target, but available simulator runtime was iOS 26.5. |
 
 The visual regression was checked in the actual SwiftUI UI rather than adding a
@@ -52,9 +53,25 @@ unit test that merely mirrors view modifiers. Paste/name checks were performed o
 the same scrolling/focus implementation before the final Done-button relocation;
 the final button and keyboard reopen were then rechecked.
 
-## Remaining acceptance
+## Owner confirmation and review
 
-Keep #15 open until the owner can visibly type/paste a full public folder URL and
-load it using the physical iPhone software keyboard. Also check opening the form
-during playback and accessibility sizes/VoiceOver when practical. This patch does
-not resolve or relax T01's outstanding feasibility evidence or scan-work budgets.
+The [owner's physical-iPhone verification](https://github.com/eugenelin89/OpenMP3/pull/16#issuecomment-6903960079)
+is dated 2026-11-15 (posted 2026-11-16 UTC). It confirms all four requested checks:
+URL visibility above the software keyboard, standard long-press Paste,
+Done → Load without autoplay, and uninterrupted music while reopening folder
+entry. These are owner-reported device observations, distinct from agent-run
+simulator and automated checks. They supersede the original unverified status.
+
+The installed Matt Pocock code-review workflow reviewed `0555831...fea05d0` with
+independent Standards and Spec reviewers. No required implementation fixes were
+found. The duplicated scroll callbacks were an optional improvement; accessibility
+coverage remained a nonblocking verification gap. The full suite (23 tests), final
+SwiftUI simulator build, and diff whitespace check passed during that review.
+
+## Remaining acceptance and scope
+
+Accessibility-size and VoiceOver checks remain explicitly unverified, as does
+runtime compatibility on the oldest supported OS. The owner authorized merging
+only PR #16's keyboard fix into its existing `codex/overnight-player` base.
+This does not authorize merging PR #14 or closing broader acceptance issues,
+and does not resolve or relax T01's feasibility evidence or scan-work budgets.
