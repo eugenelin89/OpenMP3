@@ -81,7 +81,7 @@ extension ReadyPlayerTests {
         drive.pages["c:"] = DrivePage(files: drive.pages["c:"]!.files, nextPageToken: "more")
         var controls = ExperimentControls(); controls.listingRequests = 1
         app.selectRoot("https://drive.google.com/drive/folders/c"); await app.scan(controls: controls)
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .incomplete)
         XCTAssertEqual(app.playback.ready?.root.id, "c")
         app.selectRoot("https://drive.google.com/drive/folders/empty"); await app.scan()
         XCTAssertEqual(app.playback.ready?.root.id, "c")
@@ -184,7 +184,7 @@ extension ReadyPlayerTests {
         let scan = Task { await app.scan() }
         await drive.waitForSuspension()
         app.stopScan(); drive.release(); await scan.value
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .incomplete)
         XCTAssertEqual(app.playback.ready?.selected.id, "song")
         XCTAssertTrue(audio.starts.isEmpty)
         app.play(); XCTAssertEqual(app.playback.current?.id, "song")

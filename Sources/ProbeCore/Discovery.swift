@@ -33,7 +33,7 @@ public struct DiscoveredTrack: Equatable, Identifiable {
 }
 
 public enum DriveFailure: Error, Equatable {
-    case access, transient, malformedResponse, restriction, experimentalLimit
+    case access, transient, malformedResponse, restriction, experimentalLimit, pagination
 }
 
 @MainActor public protocol DriveAccess {
@@ -58,8 +58,16 @@ public struct ExperimentControls: Codable {
     }
 }
 
+public enum ScanState: String, Codable {
+    case notStarted = "not started"
+    case scanning
+    // Retain the evidence format's legacy value; finished does not certify coverage.
+    case finished = "complete"
+    case incomplete, failed
+}
+
 public struct ScanObservation: Codable {
-    public var state = "not started"
+    public var state: ScanState = .notStarted
     public var listingRequests = 0
     public var metadataRequests = 0
     public var retries = 0
@@ -68,4 +76,5 @@ public struct ScanObservation: Codable {
     public var ignoredFiles = 0
     public var elapsedSeconds: Double = 0
     public var reasons: [String] = []
+    public var coverageNotices: [String] = []
 }

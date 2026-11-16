@@ -26,7 +26,7 @@ public struct HTTPObservation: Codable {
     }
 
     public func list(_ folder: RootFolder, pageToken: String?) async throws -> DrivePage {
-        guard pageToken == nil else { throw DriveFailure.malformedResponse }
+        guard pageToken == nil else { throw DriveFailure.pagination }
         return try await folderPage(folder, purpose: "folder listing")
     }
 

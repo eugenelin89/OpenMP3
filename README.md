@@ -1,6 +1,6 @@
 # OpenMP3 provisional player
 
-A native iPhone player for MP3s in public Google Drive folders. **No API key, OAuth or backend.** Anonymous discovery remains experimental and visibly incomplete; [T01 evidence](docs/evidence/t01/RESULTS.md) and [integrated prototype evidence](docs/evidence/overnight/RESULTS.md) distinguish verified results from open gates.
+A native iPhone player for MP3s in public Google Drive folders. **No API key, OAuth or backend.** Anonymous discovery remains experimental. Successful scans show neutral “Scan finished” with a separate coverage notice; observed partial failures remain incomplete. [T01 evidence](docs/evidence/t01/RESULTS.md) and [integrated prototype evidence](docs/evidence/overnight/RESULTS.md) distinguish verified results from open gates.
 
 The normal app opens the dark player. Paste a public folder link, optionally name it, Load, then explicitly Play all or tap a discovered track. Saved folders and the active queue have separate sheets. Browsing another root never replaces music. Audio streaming uses cellular data when available.
 
@@ -16,7 +16,7 @@ Focused validation: `swift test`. No dependency downloads are required. Saved li
 
 A small anonymous Google Drive → native AVPlayer experiment for [issue #4](https://github.com/eugenelin89/OpenMP3/issues/4). **The downstream implementation gate remains open.** See the [observed evidence and remaining gaps](docs/evidence/t01/RESULTS.md).
 
-The user's current-version decision is **no API key**. There is no key configuration, OAuth, listener login, backend, or access-control workaround. This overrides the ticket's earlier key-fallback allowance. The probe parses an **undocumented** public Drive webpage payload. It deliberately labels all real scans incomplete because pagination and descendant resource-key coverage are not established. Do not mistake the discovered count for a complete library.
+The user's current-version decision is **no API key**. There is no key configuration, OAuth, listener login, backend, or access-control workaround. This overrides the ticket's earlier key-fallback allowance. The probe parses an **undocumented** public Drive webpage payload. V201 separates unverified pagination/resource-key coverage from observed scan failures. Do not mistake the discovered count for a complete library. Historical v0.1 reports retain their original incomplete classifications.
 
 Platform targets live in the [canonical baseline](Drive_Folder_Music_Player_Brainstorm.md#platform-compatibility-baseline-single-source-of-truth). Application scan budgets remain pending in the [canonical scan-limits section](Drive_Folder_Music_Player_Brainstorm.md#v01-recursive-scan-boundary-and-limits).
 
@@ -35,7 +35,9 @@ The URL file and raw artifacts under `probe-runs/` are ignored by Git. The comma
 
 `--requests` and `--seconds` override **temporary experimental controls**, not measured application budgets. Each report records the controls used. Defaults live in `ExperimentControls`: bounded listing work, wall time, per-request/scan-wide retries, and size caps. Transport adds a response-size cap, finite request/resource timeouts and a redirect cap. Root-page validation is counted separately from folder listing; both are within the scan wall-time bound. Media sampling has separate bounds and is excluded from scan time. Never combine those metrics when deriving scan budgets.
 
-Normal command completion means a report was written, **not** that the feasibility gate passed. Read `scan.state`, reasons and HTTP observations. A malformed input or local output failure exits with a nonzero status; partial remote failures are represented in the report.
+Normal command completion means a report was written, **not** that the feasibility gate passed. Read `scan.state`, `reasons`, `coverageNotices` and HTTP observations. The legacy serialized state `complete` means the supported scan finished; it does not certify coverage. A malformed input or local output failure exits with a nonzero status; remote failures are represented as `incomplete` or `failed` in the report.
+
+For deterministic scan-status UI checks, build `python3 scripts/build_simulator.py --scan-ui-fixture` and install `.build/scan-ui/ScanStatusFixture.app` in a simulator. Launch bundle `org.openmp3.ScanStatusFixture` with `SIMCTL_CHILD_OPENMP3_SCAN_SCENARIO` set to `finished`, `empty`, `incomplete`, `incomplete-empty`, or `failed`. This separate executable uses the real player screen and coordinator with synthetic discovery; it has no network or audio output and is excluded from the normal app.
 
 ## Run the iPhone probe
 
