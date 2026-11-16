@@ -42,8 +42,16 @@ public struct RootFolder: Equatable, Hashable, Codable {
         stopReason = backgrounded ? "App left foreground" : "Scan stopped"
         scanTask?.cancel()
     }
+    public var scanStatusText: String? {
+        switch scanObservation.state {
+        case .notStarted, .scanning: return nil
+        case .finished: return "Scan finished · \(tracks.count) tracks found"
+        case .incomplete: return "Incomplete scan · \(tracks.count) tracks found"
+        case .failed: return "Scan failed"
+        }
+    }
     public func scan(controls: ExperimentControls = ExperimentControls()) async {
-        guard let root = selectedRoot, let drive, scanObservation.state != "scanning", scanTask == nil else { return }
+        guard let root = selectedRoot, let drive, scanObservation.state != .scanning, scanTask == nil else { return }
         guard controls.isValid else { error = "Invalid experimental controls"; return }
         let intent = intentGeneration
         scanTask = Task { await self.performScan(root: root, drive: drive, controls: controls, intent: intent) }
@@ -59,8 +67,10 @@ public struct RootFolder: Equatable, Hashable, Codable {
         tracks = []
         failedFolderPaths = []
         scanObservation = ScanObservation()
-        scanObservation.state = "scanning"
+        scanObservation.state = .scanning
         error = nil
+        var rootListed = false
+        var outcome: ScanState = .finished
         do {
             let metadata = try await request(listing: false, controls: controls, deadline: deadline) {
                 try await drive.inspectRoot(root)
@@ -77,10 +87,15 @@ public struct RootFolder: Equatable, Hashable, Codable {
                 do {
                     repeat {
                         let page = try await request(listing: true, controls: controls, deadline: deadline) {
-                            try await drive.list(folder, pageToken: token)
+                            do { return try await drive.list(folder, pageToken: token) }
+                            catch DriveFailure.malformedResponse where token != nil { throw DriveFailure.pagination }
                         }
-                        if let warning = page.coverageWarning, !scanObservation.reasons.contains(warning) { scanObservation.reasons.append(warning) }
-                        if page.incompleteSearch == true { scanObservation.reasons.append("Drive reported incomplete search") }
+                        if folder.id == root.id { rootListed = true }
+                        if let warning = page.coverageWarning, !scanObservation.coverageNotices.contains(warning) { scanObservation.coverageNotices.append(warning) }
+                        if page.incompleteSearch == true {
+                            outcome = .incomplete
+                            scanObservation.reasons.append("Drive reported incomplete search")
+                        }
                         for entry in page.files {
                             try checkTime(deadline)
                             if entry.mimeType == DriveEntry.shortcutType { scanObservation.shortcuts += 1; continue }
@@ -99,19 +114,30 @@ public struct RootFolder: Equatable, Hashable, Codable {
                             } else { scanObservation.ignoredFiles += 1 }
                         }
                         token = page.nextPageToken
-                        if let token, !tokens.insert(token).inserted { throw DriveFailure.malformedResponse }
+                        if let token, token.isEmpty || !tokens.insert(token).inserted { throw DriveFailure.pagination }
                     } while token != nil
-                } catch let failure as DriveFailure where folder.id != root.id && [.access, .malformedResponse, .restriction].contains(failure) {
+                } catch let failure as DriveFailure where folder.id != root.id && [.access, .malformedResponse, .restriction, .pagination].contains(failure) {
+                    outcome = .incomplete
                     failedFolderPaths.append(path)
-                    scanObservation.reasons.append("Unreadable descendant at depth \(path.count); accessible siblings retained")
+                    scanObservation.reasons.append(failure == .pagination
+                        ? "Could not continue descendant pagination at depth \(path.count); accessible siblings retained"
+                        : "Unreadable descendant at depth \(path.count); accessible siblings retained")
                 }
             }
         } catch {
+            outcome = .incomplete
             if error is CancellationError || Task.isCancelled { self.error = stopReason }
             else if let limit = error as? ScanLimit { self.error = limit.reason }
             else if error as? DriveFailure == .experimentalLimit { self.error = "Experimental response-size limit" }
-            else if error as? DriveFailure == .transient { self.error = "Temporary network or quota failure; retry controls exhausted" }
-            else { self.error = "Drive access or response failure" }
+            else if error as? DriveFailure == .pagination { self.error = "Could not continue folder pagination. Try scanning again." }
+            else {
+                outcome = rootListed ? .incomplete : .failed
+                if error as? DriveFailure == .transient {
+                    self.error = "Temporary network or quota failure; retry controls exhausted. Check your connection and rescan."
+                } else {
+                    self.error = "Could not read this folder. Check that its link allows public access, then rescan."
+                }
+            }
             scanObservation.reasons.append(self.error!)
         }
         tracks.sort {
@@ -121,7 +147,7 @@ public struct RootFolder: Equatable, Hashable, Codable {
             return $0.id < $1.id
         }
         scanObservation.elapsedSeconds = max(0, now() - started)
-        scanObservation.state = scanObservation.reasons.isEmpty ? "complete" : "incomplete"
+        scanObservation.state = outcome
         collections[root] = SessionCollection(tracks: tracks, scan: scanObservation, failedPaths: failedFolderPaths, error: error)
         if intent == intentGeneration && canPlayCollection {
             let collection = CollectionSnapshot(root: root, name: selectedRootName, tracks: tracks)
@@ -175,7 +201,7 @@ public struct RootFolder: Equatable, Hashable, Codable {
         }
     }
     public func selectRoot(_ input: String) {
-        guard scanObservation.state != "scanning", scanTask == nil else { return }
+        guard scanObservation.state != .scanning, scanTask == nil else { return }
         tracks = []
         failedFolderPaths = []
         scanObservation = ScanObservation()
@@ -225,7 +251,7 @@ public struct RootFolder: Equatable, Hashable, Codable {
         selectRoot(saved.root.link)
     }
     public func removeSavedRoot(id: String) {
-        guard scanObservation.state != "scanning", scanTask == nil else { return }
+        guard scanObservation.state != .scanning, scanTask == nil else { return }
         intentGeneration = UUID()
         if playback.ready?.root.id == id { playback.ready = nil }
         if playback.pending?.root.id == id { playback.pending = nil }

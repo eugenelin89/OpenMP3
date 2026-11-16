@@ -22,11 +22,15 @@ final class ProbeApplicationTests: XCTestCase {
     var pages: [String: DrivePage] = [:]
     var denied: Set<String> = []
     var failures: [String: DriveFailure] = [:]
+    var pageFailures: [String: DriveFailure] = [:]
+    var onList: ((RootFolder) -> Void)?
     func inspectRoot(_ root: RootFolder) async throws -> DriveEntry {
         if denied.contains(root.id) { throw DriveFailure.access }
         return DriveEntry(id: root.id, name: "Fixture", mimeType: DriveEntry.folderType)
     }
     func list(_ folder: RootFolder, pageToken: String?) async throws -> DrivePage {
+        onList?(folder)
+        if let failure = pageFailures[folder.id + ":" + (pageToken ?? "")] { throw failure }
         if denied.contains(folder.id) { throw DriveFailure.access }
         if let failure = failures[folder.id] { throw failure }
         return pages[folder.id + ":" + (pageToken ?? "")] ?? DrivePage(files: [])
@@ -50,7 +54,7 @@ extension ProbeApplicationTests {
         await app.scan()
         XCTAssertEqual(app.tracks.map(\.id), ["root-track", "child-track", "deep-track"])
         XCTAssertEqual(app.tracks.map(\.path), [[], ["Child"], ["Child", "Grandchild"]])
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .incomplete)
         XCTAssertEqual(app.scanObservation.shortcuts, 1)
         XCTAssertEqual(app.scanObservation.ignoredFiles, 1)
         XCTAssertEqual(app.scanObservation.listingRequests, 5)
@@ -67,7 +71,7 @@ extension ProbeApplicationTests {
         var controls = ExperimentControls()
         controls.listingRequests = 2
         await app.scan(controls: controls)
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .incomplete)
         XCTAssertEqual(app.scanObservation.listingRequests, 2)
         XCTAssertEqual(app.tracks.map(\.id), ["track"])
         XCTAssertTrue(app.scanObservation.reasons.contains("Experimental listing-request limit"))
@@ -122,11 +126,11 @@ extension ProbeApplicationTests {
         app.selectRoot("https://drive.google.com/drive/folders/private")
         XCTAssertNil(app.error)
         await app.scan()
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
-        XCTAssertEqual(app.error, "Drive access or response failure")
+        XCTAssertEqual(app.scanObservation.state, .failed)
+        XCTAssertEqual(app.error, "Could not read this folder. Check that its link allows public access, then rescan.")
         app.selectRoot("https://drive.google.com/drive/folders/empty")
         await app.scan()
-        XCTAssertEqual(app.scanObservation.state, "complete")
+        XCTAssertEqual(app.scanObservation.state, .finished)
         XCTAssertTrue(app.tracks.isEmpty)
         app.playAll()
         XCTAssertTrue(app.playback.queue.isEmpty)
@@ -140,10 +144,10 @@ extension ProbeApplicationTests {
         app.selectRoot("https://drive.google.com/drive/folders/root")
         var controls = ExperimentControls(); controls.tracks = 1
         await app.scan(controls: controls)
-        XCTAssertEqual(app.scanObservation.state, "complete")
+        XCTAssertEqual(app.scanObservation.state, .finished)
         drive.pages["root:"] = DrivePage(files: [first, DriveEntry(id: "two", name: "2.mp3", mimeType: "audio/mpeg")])
         await app.scan(controls: controls)
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .incomplete)
         XCTAssertEqual(app.tracks.map(\.id), ["one"])
     }
 
@@ -154,8 +158,10 @@ extension ProbeApplicationTests {
         let app = ProbeApplication(drive: drive)
         app.selectRoot("https://drive.google.com/drive/folders/root")
         await app.scan()
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .incomplete)
         XCTAssertEqual(app.scanObservation.listingRequests, 2)
+        XCTAssertEqual(app.scanStatusText, "Incomplete scan · 0 tracks found")
+        XCTAssertEqual(app.error, "Could not continue folder pagination. Try scanning again.")
     }
 }
 
@@ -178,7 +184,7 @@ extension ProbeApplicationTests {
         app.selectRoot("https://drive.google.com/drive/folders/root")
         var controls = ExperimentControls(); controls.retryDelay = 0
         await app.scan(controls: controls)
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .failed)
         XCTAssertEqual(app.scanObservation.listingRequests, 2)
         XCTAssertEqual(app.scanObservation.retries, 1)
         XCTAssertTrue(app.error?.contains("retry controls exhausted") == true)
@@ -190,7 +196,7 @@ extension ProbeApplicationTests {
         app.selectRoot("https://drive.google.com/drive/folders/root")
         var controls = ExperimentControls(); controls.seconds = 0.03
         await app.scan(controls: controls)
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .incomplete)
         XCTAssertEqual(app.error, "Experimental wall-clock limit")
         XCTAssertEqual(app.scanObservation.listingRequests, 1)
     }
@@ -203,7 +209,7 @@ extension ProbeApplicationTests {
         while app.scanObservation.listingRequests == 0 { await Task.yield() }
         app.stopScan(backgrounded: true)
         await scan.value
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .incomplete)
         XCTAssertEqual(app.error, "App left foreground")
         XCTAssertEqual(app.scanObservation.listingRequests, 1)
     }
@@ -233,7 +239,7 @@ extension ProbeApplicationTests {
         await app.scan()
         XCTAssertEqual(app.tracks.map(\.id), ["song"])
         XCTAssertEqual(app.failedFolderPaths, [["Bad"]])
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .incomplete)
     }
     @MainActor func testAnonymousEscapedUnicodeFilenameIsDiscoveredWithoutClaimingCompleteCoverage() async {
         let drive = AnonymousDrive(protocolClasses: [EncodedPageProtocol.self])
@@ -241,7 +247,9 @@ extension ProbeApplicationTests {
         app.selectRoot("https://drive.google.com/drive/folders/root")
         await app.scan()
         XCTAssertEqual(app.tracks.map { $0.entry.name }, ["😀.mp3"])
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .finished)
+        XCTAssertTrue(app.scanObservation.reasons.isEmpty)
+        XCTAssertNil(app.error)
     }
 }
 
@@ -262,7 +270,7 @@ extension ProbeApplicationTests {
         await app.scan()
         XCTAssertEqual(app.tracks.map(\.id), ["song"])
         XCTAssertEqual(app.failedFolderPaths, [["Bad"]])
-        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.scanObservation.state, .incomplete)
     }
 }
 
@@ -300,7 +308,28 @@ extension ProbeApplicationTests {
         XCTAssertNil(app.error)
         XCTAssertTrue(app.tracks.isEmpty)
         XCTAssertEqual(app.scanObservation.listingRequests, 1)
-        XCTAssertEqual(app.scanObservation.state, "incomplete") // Coverage contract remains unverified.
+        XCTAssertEqual(app.scanObservation.state, .finished)
+        XCTAssertEqual(app.scanStatusText, "Scan finished · 0 tracks found")
+        XCTAssertFalse(app.scanObservation.coverageNotices.isEmpty)
+        XCTAssertFalse(app.canPlayCollection)
         XCTAssertEqual(app.failedFolderPaths, [])
+    }
+}
+
+extension ProbeApplicationTests {
+    @MainActor func testCoverageCopyCannotChangeOutcomeAndRawNoticeIsRetained() async {
+        let drive = FixtureDrive()
+        let app = ProbeApplication(drive: drive, audio: FixtureAudio())
+        app.selectRoot("https://drive.google.com/drive/folders/root")
+        for notice in ["Undocumented webpage: pagination and descendant resource keys unverified", "Incomplete scan", "Different coverage wording"] {
+            drive.pages["root:"] = DrivePage(files: [DriveEntry(id: "song", name: "song.mp3", mimeType: "audio/mpeg")], coverageWarning: notice)
+            await app.scan()
+            XCTAssertEqual(app.scanObservation.state, .finished)
+            XCTAssertEqual(app.scanStatusText, "Scan finished · 1 tracks found")
+            XCTAssertEqual(app.scanObservation.coverageNotices, [notice])
+            XCTAssertTrue(app.scanObservation.reasons.isEmpty)
+            XCTAssertTrue(app.canPlayCollection)
+            XCTAssertTrue(app.playback.queue.isEmpty)
+        }
     }
 }
