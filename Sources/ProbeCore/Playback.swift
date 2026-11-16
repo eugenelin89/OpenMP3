@@ -52,10 +52,8 @@ public struct ReadyCollection {
         index = history[historyPosition]
     }
     mutating func setShuffle(_ enabled: Bool, shuffled: ([DiscoveredTrack]) -> [DiscoveredTrack]) {
-        let boundary = highWaterIndex + 1
-        let suffix = Array(order.dropFirst(boundary))
-        let ids = Set(suffix.map(\.id))
-        order = Array(order.prefix(boundary)) + (enabled ? shuffled(suffix) : tracks.filter { ids.contains($0.id) })
+        order = reorderedUpcoming(order, canonical: tracks, visitedThrough: highWaterIndex,
+                                  shuffle: enabled ? shuffled : { $0 })
     }
     public var selected: DiscoveredTrack { order[index] }
 }
@@ -66,6 +64,9 @@ public struct PlaybackObservation {
     public var displayState: String { ready == nil ? state : "ready" }
     public var displaySource: String { ready.map { "Ready: " + $0.name } ?? (queue.isEmpty ? "Load a folder to prepare music" : "Queue source · " + sourceName) }
     public var canPlay: Bool { ready != nil || !queue.isEmpty }
+    public var hasResumableCurrent: Bool {
+        current != nil && !["unavailable", "failed", "ended"].contains(state)
+    }
 
     public var shuffle = false
     public var repeatMode = RepeatMode.off
@@ -102,4 +103,12 @@ public enum PlayerCommand {
 
 extension AudioOutput {
     public func updateNowPlaying(_ playback: PlaybackObservation) {}
+}
+
+/// Preserve visited entries while ordering only the unvisited suffix.
+func reorderedUpcoming(_ order: [DiscoveredTrack], canonical: [DiscoveredTrack],
+                       visitedThrough: Int, shuffle: ([DiscoveredTrack]) -> [DiscoveredTrack]) -> [DiscoveredTrack] {
+    let boundary = visitedThrough + 1
+    let remainingIDs = Set(order.dropFirst(boundary).map(\.id))
+    return Array(order.prefix(boundary)) + shuffle(canonical.filter { remainingIDs.contains($0.id) })
 }

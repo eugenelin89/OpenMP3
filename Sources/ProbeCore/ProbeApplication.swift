@@ -121,7 +121,7 @@ public struct RootFolder: Equatable, Hashable, Codable {
         scanObservation.elapsedSeconds = max(0, now() - started)
         scanObservation.state = scanObservation.reasons.isEmpty ? "complete" : "incomplete"
         collections[root] = SessionCollection(tracks: tracks, scan: scanObservation, failedPaths: failedFolderPaths, error: error)
-        if canPlayCollection && playback.current == nil {
+        if canPlayCollection && !playback.hasResumableCurrent {
             playback.ready = ReadyCollection(root: root, name: selectedRootName, tracks: tracks,
                                               order: playback.shuffle ? shuffled(tracks) : tracks)
         }

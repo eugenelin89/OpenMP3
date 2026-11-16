@@ -182,11 +182,9 @@ extension ProbeApplication {
         playback.shuffle = enabled
         playback.ready?.setShuffle(enabled, shuffled: shuffled)
         guard playback.current != nil else { return }
-        let boundary = playback.highWaterIndex + 1
-        let prefix = Array(playback.queue.prefix(boundary))
-        let rest = Array(playback.queue.dropFirst(boundary))
-        let remainingIDs = Set(rest.map(\.id))
-        playback.queue = prefix + (enabled ? shuffled(rest) : playback.canonicalQueue.filter { remainingIDs.contains($0.id) })
+        playback.queue = reorderedUpcoming(playback.queue, canonical: playback.canonicalQueue,
+                                           visitedThrough: playback.highWaterIndex,
+                                           shuffle: enabled ? shuffled : { $0 })
     }
     func newCycle(avoiding last: String? = nil) {
         let playable = playback.canonicalQueue.filter { !playback.unavailableIDs.contains($0.id) }

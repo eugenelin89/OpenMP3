@@ -151,3 +151,17 @@ extension ReadyPlayerTests {
         XCTAssertTrue(audio.starts.isEmpty)
     }
 }
+
+extension ReadyPlayerTests {
+    @MainActor func testNewSettlementAfterPermanentExhaustionPreparesReadyCollection() async {
+        let drive = FixtureDrive(), audio = RecordingAudio()
+        for root in ["a", "b"] { drive.pages[root + ":"] = DrivePage(files: [DriveEntry(id: root, name: root + ".mp3", mimeType: "audio/mpeg")]) }
+        let app = ProbeApplication(drive: drive, audio: audio)
+        app.selectRoot("https://drive.google.com/drive/folders/a"); await app.scan(); app.play()
+        app.receive(.unavailable(id: "a"))
+        app.selectRoot("https://drive.google.com/drive/folders/b"); await app.scan()
+        XCTAssertEqual(app.playback.ready?.root.id, "b")
+        app.play()
+        XCTAssertEqual(app.playback.current?.id, "b")
+    }
+}
