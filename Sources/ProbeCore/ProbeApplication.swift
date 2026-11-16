@@ -17,6 +17,7 @@ public struct RootFolder: Equatable, Hashable, Codable {
     @Published public private(set) var storageError: String?
     private let storage: RootStorage?
     private var collections: [RootFolder: SessionCollection] = [:]
+    var intentGeneration = UUID()
     var audioGeneration = UUID()
     var interrupted = false
     let shuffled: ([DiscoveredTrack]) -> [DiscoveredTrack]
@@ -44,14 +45,15 @@ public struct RootFolder: Equatable, Hashable, Codable {
     public func scan(controls: ExperimentControls = ExperimentControls()) async {
         guard let root = selectedRoot, let drive, scanObservation.state != "scanning", scanTask == nil else { return }
         guard controls.isValid else { error = "Invalid experimental controls"; return }
-        scanTask = Task { await self.performScan(root: root, drive: drive, controls: controls) }
+        let intent = intentGeneration
+        scanTask = Task { await self.performScan(root: root, drive: drive, controls: controls, intent: intent) }
         await withTaskCancellationHandler(operation: { await scanTask?.value }, onCancel: {
             Task { @MainActor in self.stopScan() }
         })
         scanTask = nil
     }
 
-    private func performScan(root: RootFolder, drive: DriveAccess, controls: ExperimentControls) async {
+    private func performScan(root: RootFolder, drive: DriveAccess, controls: ExperimentControls, intent: UUID) async {
         let started = now()
         let deadline = started + controls.seconds
         tracks = []
@@ -121,7 +123,7 @@ public struct RootFolder: Equatable, Hashable, Codable {
         scanObservation.elapsedSeconds = max(0, now() - started)
         scanObservation.state = scanObservation.reasons.isEmpty ? "complete" : "incomplete"
         collections[root] = SessionCollection(tracks: tracks, scan: scanObservation, failedPaths: failedFolderPaths, error: error)
-        if canPlayCollection {
+        if intent == intentGeneration && canPlayCollection {
             let collection = CollectionSnapshot(root: root, name: selectedRootName, tracks: tracks)
             if playback.hasResumableCurrent {
                 playback.pending = collection
@@ -224,6 +226,9 @@ public struct RootFolder: Equatable, Hashable, Codable {
     }
     public func removeSavedRoot(id: String) {
         guard scanObservation.state != "scanning", scanTask == nil else { return }
+        intentGeneration = UUID()
+        if playback.ready?.root.id == id { playback.ready = nil }
+        if playback.pending?.root.id == id { playback.pending = nil }
         savedRoots.removeAll { $0.id == id }
         collections = collections.filter { $0.key.id != id }
         if selectedRoot?.id == id {

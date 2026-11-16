@@ -183,7 +183,7 @@ struct PlayerScreen: View {
                             Text(track.entry.name).multilineTextAlignment(.leading).foregroundColor(.primary)
                             Spacer(minLength: 0)
                         }.frame(minHeight: 44).contentShape(Rectangle())
-                    }.disabled(!app.canPlayCollection).accessibilityLabel("Play " + track.entry.name + ", " + group.label)
+                    }.accessibilityLabel("Play " + track.entry.name + ", " + group.label)
                     Divider()
                 }
             }
