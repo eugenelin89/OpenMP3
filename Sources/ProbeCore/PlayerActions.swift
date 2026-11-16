@@ -2,7 +2,7 @@ import Foundation
 
 extension ProbeApplication {
     public var canPlayCollection: Bool {
-        ["complete", "incomplete"].contains(scanObservation.state) && !tracks.isEmpty
+        [ScanState.finished, .incomplete].contains(scanObservation.state) && !tracks.isEmpty
     }
     public var isPlaybackRequested: Bool { playback.wantsPlayback }
     public func playAll() {

@@ -45,7 +45,7 @@ struct PlayerScreen: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { showingRoots = true } label: { Label("Saved folders", systemImage: "folder") }
-                        .disabled(app.scanObservation.state == "scanning")
+                        .disabled(app.scanObservation.state == .scanning)
                 }
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     if focusedField != nil {
@@ -130,8 +130,8 @@ struct PlayerScreen: View {
                 }
                 Spacer()
                 if app.selectedRoot != nil {
-                    Button(app.scanObservation.state == "scanning" ? "Stop scan" : "Rescan") {
-                        if app.scanObservation.state == "scanning" { app.stopScan() } else { scan() }
+                    Button(app.scanObservation.state == .scanning ? "Stop scan" : "Rescan") {
+                        if app.scanObservation.state == .scanning { app.stopScan() } else { scan() }
                     }.frame(minHeight: 44)
                 }
             }
@@ -150,25 +150,36 @@ struct PlayerScreen: View {
                         .focused($focusedField, equals: .link).id(FolderField.link)
                         .submitLabel(.done).onSubmit { focusedField = nil }
                     Button("Load folder") { load() }.frame(maxWidth: .infinity, minHeight: 44).buttonStyle(.borderedProminent).foregroundColor(.black)
-                        .disabled(link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || app.scanObservation.state == "scanning")
+                        .disabled(link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || app.scanObservation.state == .scanning)
                 }.padding(.top, 10)
-            }.disabled(app.scanObservation.state == "scanning")
-            if app.scanObservation.state == "scanning" {
+            }.disabled(app.scanObservation.state == .scanning)
+            if app.scanObservation.state == .scanning {
                 ProgressView("Discovering · \(app.tracks.count) tracks · \(app.scanObservation.folders) folders")
-            } else if app.scanObservation.state != "not started" {
-                Text(app.scanObservation.state == "incomplete" ? "Incomplete scan · \(app.tracks.count) discovered tracks" : "\(app.tracks.count) discovered tracks")
-                    .font(.headline).foregroundColor(app.scanObservation.state == "incomplete" ? .orange : lime)
+            } else if let status = app.scanStatusText {
+                Text(status).font(.headline)
+                    .foregroundColor(app.scanObservation.state == .finished ? .primary : .orange)
+                    .accessibilityIdentifier("scan-status")
             } else if app.selectedRoot != nil { Text("Ready to scan. Your previous queue is unchanged.").foregroundColor(.secondary) }
             if let error = app.error { Text(error).foregroundColor(.orange) }
             if let error = app.storageError ?? configurationError { Text(error).foregroundColor(.orange) }
-            if app.scanObservation.state == "incomplete" {
-                Text("Some tracks may be missing. You can play the tracks found below.").font(.callout)
+            if app.scanObservation.state == .incomplete {
+                Text(app.tracks.isEmpty ? "Some tracks may be missing. Try scanning again." : "Some tracks may be missing. You can play the tracks found below.").font(.callout)
+            }
+            if !app.scanObservation.reasons.isEmpty {
                 DisclosureGroup("Scan details") {
                     ForEach(Array(Set(app.scanObservation.reasons)).sorted(), id: \.self) { Text($0).font(.caption) }
                     ForEach(Array(app.failedFolderPaths.enumerated()), id: \.offset) { Text("Could not read: " + $0.element.joined(separator: " / ")).font(.caption) }
                 }
+                .accessibilityValue(app.scanObservation.reasons.joined(separator: ". "))
+                .accessibilityIdentifier("scan-details")
             }
-            if app.scanObservation.state != "not started" {
+            if !app.scanObservation.coverageNotices.isEmpty {
+                DisclosureGroup("Full folder coverage not verified") {
+                    ForEach(app.scanObservation.coverageNotices, id: \.self) { Text($0).font(.caption) }
+                }.font(.caption).foregroundColor(.secondary)
+                    .accessibilityIdentifier("scan-coverage")
+            }
+            if app.scanObservation.state != .notStarted {
                 Text("\(app.scanObservation.shortcuts) shortcuts skipped").font(.caption).foregroundColor(.secondary)
             }
             HStack {
@@ -257,7 +268,7 @@ struct PlayerScreen: View {
         app.saveSelectedRoot(name: name)
         addingFolder = false
         name = ""; link = ""
-        if app.scanObservation.state == "not started" { scan() }
+        if app.scanObservation.state == .notStarted { scan() }
     }
     private func scan() {
         guard let data = Bundle.main.object(forInfoDictionaryKey: "OpenMP3ScanControls") as? [String: Any],

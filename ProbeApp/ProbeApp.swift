@@ -50,12 +50,13 @@ struct ProbeView: View {
                     Button("Scan") {
                         app.selectRoot(link)
                         Task { await app.scan() }
-                    }.disabled(app.scanObservation.state == "scanning")
-                    Button("Stop scan") { app.stopScan() }.disabled(app.scanObservation.state != "scanning")
-                    Text("Scan: \(app.scanObservation.state); \(app.tracks.count) discovered tracks")
+                    }.disabled(app.scanObservation.state == .scanning)
+                    Button("Stop scan") { app.stopScan() }.disabled(app.scanObservation.state != .scanning)
+                    Text("Scan: \(app.scanObservation.state.rawValue); \(app.tracks.count) discovered tracks")
                     Text("Listing requests: \(app.scanObservation.listingRequests); elapsed: \(app.scanObservation.elapsedSeconds, specifier: "%.2f")s")
                     if let error = app.error { Text(error).foregroundColor(.red) }
                     ForEach(Array(Set(app.scanObservation.reasons)).sorted(), id: \.self) { Text($0) }
+                    ForEach(app.scanObservation.coverageNotices, id: \.self) { Text($0).foregroundColor(.secondary) }
                     ForEach(Array(app.failedFolderPaths.enumerated()), id: \.offset) { Text("Unreadable folder: " + $0.element.joined(separator: " / ")) }
                 }
                 Section(header: Text("Native playback")) {
@@ -63,7 +64,7 @@ struct ProbeView: View {
                     Text("Selected root: \(app.selectedRoot?.id ?? "none")")
                     Text(app.playback.current?.entry.name ?? "No current track")
                     Text("\(app.playback.state): \(app.playback.seconds, specifier: "%.1f") / \(app.playback.duration, specifier: "%.1f")s")
-                    Button("Play All") { app.playAll() }.disabled(app.tracks.isEmpty || app.scanObservation.state == "scanning")
+                    Button("Play All") { app.playAll() }.disabled(app.tracks.isEmpty || app.scanObservation.state == .scanning)
                     Button("Pause") { app.pause() }
                     Button("Next track") { app.next() }
                     Button("Seek to midpoint") { app.seek(seconds: app.playback.duration / 2) }
@@ -129,7 +130,7 @@ struct ProbeView: View {
         Audio route: \(AVAudioSession.sharedInstance().currentRoute.outputs.map { $0.portType.rawValue }.joined(separator: ", "))
         Access: anonymous-no-key
         First track: \(audibleFirst); seek: \(audibleSeek); second track: \(audibleSecond); natural next: \(naturalNext)
-        Scan: \(app.scanObservation.state); tracks: \(app.tracks.count); requests: \(app.scanObservation.listingRequests); elapsed: \(app.scanObservation.elapsedSeconds)
+        Scan: \(app.scanObservation.state.rawValue); tracks: \(app.tracks.count); requests: \(app.scanObservation.listingRequests); elapsed: \(app.scanObservation.elapsedSeconds)
         Native events:
         \(app.playback.events.joined(separator: "\n"))
         Listing HTTP observations (AVPlayer traffic is separate):

@@ -44,7 +44,7 @@ import ProbeCore
             let report = app.evidence(controls: controls, requests: drive.observations, media: mediaResults)
             let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             try encoder.encode(report).write(to: URL(fileURLWithPath: output), options: .atomic)
-            print("Discovered \(app.tracks.count) tracks; scan \(app.scanObservation.state). Report written. Gate OPEN.")
+            print("Discovered \(app.tracks.count) tracks; scan \(app.scanObservation.state.rawValue). Report written. Gate OPEN.")
         } catch {
             // Do not emit error descriptions that can contain shared URLs or keys.
             print("Probe failed: check arguments, local file access, and the evidence report. Use --help.")
