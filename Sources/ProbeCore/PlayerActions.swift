@@ -14,13 +14,13 @@ extension ProbeApplication {
         let ordered = playback.shuffle ? [tracks[index]] + shuffled(tracks.filter { $0.id != id }) : tracks
         beginQueue(ordered, starting: playback.shuffle ? 0 : index)
     }
-    private func beginQueue(_ ordered: [DiscoveredTrack], starting index: Int) {
+    private func beginQueue(_ ordered: [DiscoveredTrack], starting index: Int, snapshot: ReadyCollection? = nil) {
         let shuffle = playback.shuffle, repeatMode = playback.repeatMode
         playback = PlaybackObservation()
         playback.shuffle = shuffle; playback.repeatMode = repeatMode
-        playback.canonicalQueue = tracks
-        playback.queueSource = selectedRoot
-        playback.sourceName = selectedRootName
+        playback.canonicalQueue = snapshot?.tracks ?? tracks
+        playback.queueSource = snapshot?.root ?? selectedRoot
+        playback.sourceName = snapshot?.name ?? selectedRootName
         playback.queue = ordered
         playback.index = index
         playback.highWaterIndex = index
@@ -29,6 +29,11 @@ extension ProbeApplication {
         startCurrent()
     }
     public func play() {
+        if let ready = playback.ready {
+            guard audio != nil else { return }
+            beginQueue(ready.order, starting: ready.index, snapshot: ready)
+            return
+        }
         guard !playback.queue.isEmpty else { return }
         playback.wantsPlayback = true
         guard !interrupted else { return }
@@ -52,6 +57,11 @@ extension ProbeApplication {
         audio?.seek(seconds: target)
     }
     public func next() {
+        if playback.ready != nil {
+            let mode = playback.repeatMode
+            playback.ready?.next(repeatMode: mode)
+            return
+        }
         guard let previous = playback.current else { return }
         while playback.historyPosition + 1 < playback.history.count {
             playback.historyPosition += 1
@@ -71,6 +81,7 @@ extension ProbeApplication {
         }
     }
     public func previous() {
+        if playback.ready != nil { playback.ready?.previous(); return }
         guard playback.current != nil else { return }
         if playback.seconds >= 3 || playback.historyPosition == 0 { seek(seconds: 0); return }
         let originalPosition = playback.historyPosition
@@ -169,12 +180,11 @@ extension ProbeApplication {
     public func setRepeat(_ mode: RepeatMode) { playback.repeatMode = mode }
     public func setShuffle(_ enabled: Bool) {
         playback.shuffle = enabled
+        playback.ready?.setShuffle(enabled, shuffled: shuffled)
         guard playback.current != nil else { return }
-        let boundary = playback.highWaterIndex + 1
-        let prefix = Array(playback.queue.prefix(boundary))
-        let rest = Array(playback.queue.dropFirst(boundary))
-        let remainingIDs = Set(rest.map(\.id))
-        playback.queue = prefix + (enabled ? shuffled(rest) : playback.canonicalQueue.filter { remainingIDs.contains($0.id) })
+        playback.queue = reorderedUpcoming(playback.queue, canonical: playback.canonicalQueue,
+                                           visitedThrough: playback.highWaterIndex,
+                                           shuffle: enabled ? shuffled : { $0 })
     }
     func newCycle(avoiding last: String? = nil) {
         let playable = playback.canonicalQueue.filter { !playback.unavailableIDs.contains($0.id) }

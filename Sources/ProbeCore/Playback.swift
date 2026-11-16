@@ -26,7 +26,48 @@ public enum AudioEvent {
 
 public enum RepeatMode: String, CaseIterable { case off, all, one }
 
+public struct ReadyCollection {
+    public let root: RootFolder
+    public let name: String
+    public let tracks: [DiscoveredTrack]
+    public internal(set) var order: [DiscoveredTrack]
+    public internal(set) var index = 0
+    var highWaterIndex = 0
+    var history = [0]
+    var historyPosition = 0
+    mutating func next(repeatMode: RepeatMode) {
+        if historyPosition + 1 < history.count {
+            historyPosition += 1
+            index = history[historyPosition]
+        } else if index + 1 < order.count || repeatMode == .all {
+            index = (index + 1) % order.count
+            highWaterIndex = max(highWaterIndex, index)
+            history.append(index)
+            historyPosition = history.count - 1
+        }
+    }
+    mutating func previous() {
+        guard historyPosition > 0 else { return }
+        historyPosition -= 1
+        index = history[historyPosition]
+    }
+    mutating func setShuffle(_ enabled: Bool, shuffled: ([DiscoveredTrack]) -> [DiscoveredTrack]) {
+        order = reorderedUpcoming(order, canonical: tracks, visitedThrough: highWaterIndex,
+                                  shuffle: enabled ? shuffled : { $0 })
+    }
+    public var selected: DiscoveredTrack { order[index] }
+}
+
 public struct PlaybackObservation {
+    public internal(set) var ready: ReadyCollection?
+    public var displayTrack: DiscoveredTrack? { ready?.selected ?? current }
+    public var displayState: String { ready == nil ? state : "ready" }
+    public var displaySource: String { ready.map { "Ready: " + $0.name } ?? (queue.isEmpty ? "Load a folder to prepare music" : "Queue source · " + sourceName) }
+    public var canPlay: Bool { ready != nil || !queue.isEmpty }
+    public var hasResumableCurrent: Bool {
+        current != nil && !["unavailable", "failed", "ended"].contains(state)
+    }
+
     public var shuffle = false
     public var repeatMode = RepeatMode.off
     public var unavailableIDs: Set<String> = []
@@ -62,4 +103,12 @@ public enum PlayerCommand {
 
 extension AudioOutput {
     public func updateNowPlaying(_ playback: PlaybackObservation) {}
+}
+
+/// Preserve visited entries while ordering only the unvisited suffix.
+func reorderedUpcoming(_ order: [DiscoveredTrack], canonical: [DiscoveredTrack],
+                       visitedThrough: Int, shuffle: ([DiscoveredTrack]) -> [DiscoveredTrack]) -> [DiscoveredTrack] {
+    let boundary = visitedThrough + 1
+    let remainingIDs = Set(order.dropFirst(boundary).map(\.id))
+    return Array(order.prefix(boundary)) + shuffle(canonical.filter { remainingIDs.contains($0.id) })
 }
