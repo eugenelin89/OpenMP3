@@ -6,6 +6,7 @@ import ProbeCore
 struct PlayerScreen: View {
     @ObservedObject var app: ProbeApplication
     @Environment(\.scenePhase) private var phase
+    @Environment(\.sizeCategory) private var sizeCategory
     private enum FolderField: Hashable { case name, link }
     @FocusState private var focusedField: FolderField?
     @State private var link = ""
@@ -62,51 +63,49 @@ struct PlayerScreen: View {
         .sheet(isPresented: $showingRoots) { rootsSheet }
         .sheet(isPresented: $showingQueue) { queueSheet }
         .onChange(of: phase) { if $0 != .active { app.stopScan(backgrounded: true) } }
-        .onChange(of: app.playback.seconds) { if !seeking { seekValue = $0 } }
+        .onChange(of: app.playback.displaySeconds) { if !seeking { seekValue = $0 } }
     }
 
     private var player: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("OPEN / MP3").font(.headline.monospaced()).tracking(2)
-                Spacer()
-                Text(app.playback.displayState.uppercased()).font(.caption.monospaced()).foregroundColor(lime)
+            Group {
+                if sizeCategory.isAccessibilityCategory {
+                    VStack(alignment: .leading, spacing: 6) { playerBrand; playerState }
+                } else {
+                    HStack { playerBrand; Spacer(); playerState }
+                }
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text(app.playback.displayTrack?.entry.name ?? "Load a folder to begin")
-                    .font(.title3.monospaced()).foregroundColor(lime).lineLimit(2)
+                    .font(.title3.monospaced()).foregroundColor(lime).fixedSize(horizontal: false, vertical: true)
                 Text(app.playback.displaySource).font(.caption).foregroundColor(.white.opacity(0.8))
                 if let pending = app.playback.pending {
                     Text("Up Next: " + pending.name).font(.callout).accessibilityIdentifier("pending-source")
                 }
                 HStack {
-                    Text(time(app.playback.seconds))
+                    Text(time(app.playback.displaySeconds))
                     Spacer()
-                    Text(time(app.playback.duration))
+                    Text(time(app.playback.displayDuration))
                 }.font(.body.monospacedDigit()).foregroundColor(lime)
             }.padding(12).frame(maxWidth: .infinity, alignment: .leading).background(Color.black.opacity(0.45)).cornerRadius(8)
-            Slider(value: $seekValue, in: 0...max(1, app.playback.duration), onEditingChanged: { editing in
+            Slider(value: $seekValue, in: 0...max(1, app.playback.displayDuration), onEditingChanged: { editing in
                 seeking = editing
                 if !editing { app.seek(seconds: seekValue) }
-            }).disabled(app.playback.duration <= 0).accessibilityLabel("Playback position")
+            }).disabled(!app.playback.canSeek).accessibilityLabel("Playback position")
                 .accessibilityValue(time(seekValue))
             HStack(spacing: 12) {
-                transport("Previous", icon: "backward.end.fill") { app.previous() }
+                transport("Previous", icon: "backward.end.fill") { app.handle(.previous) }.disabled(!app.playback.canPrevious)
                 transport(app.isPlaybackRequested ? "Pause" : "Play", icon: app.isPlaybackRequested ? "pause.fill" : "play.fill") {
                     app.handle(.toggle)
+                }.disabled(!(app.playback.canPause || app.playback.canPlay))
+                transport("Next", icon: "forward.end.fill") { app.handle(.next) }.disabled(!app.playback.canNext)
+            }
+            Group {
+                if sizeCategory.isAccessibilityCategory {
+                    VStack(alignment: .leading, spacing: 12) { shuffleControl; repeatControl }
+                } else {
+                    HStack { shuffleControl; Spacer(); repeatControl }
                 }
-                transport("Next", icon: "forward.end.fill") { app.next() }
-            }.disabled(!app.playback.canPlay)
-            HStack {
-                Button { app.setShuffle(!app.playback.shuffle) } label: {
-                    Label(app.playback.shuffle ? "Shuffle on" : "Shuffle off", systemImage: "shuffle")
-                }.accessibilityValue(app.playback.shuffle ? "On" : "Off")
-                Spacer()
-                Menu {
-                    ForEach(RepeatMode.allCases, id: \.self) { mode in
-                        Button("Repeat " + mode.rawValue.capitalized) { app.setRepeat(mode) }
-                    }
-                } label: { Label("Repeat " + app.playback.repeatMode.rawValue.capitalized, systemImage: app.playback.repeatMode == .one ? "repeat.1" : "repeat") }
             }.font(.subheadline).frame(minHeight: 44)
             if let message = app.playback.message {
                 Text(message).font(.callout).foregroundColor(.orange)
@@ -118,6 +117,24 @@ struct PlayerScreen: View {
         .padding(14).background(LinearGradient(colors: [panel, Color(red: 0.09, green: 0.11, blue: 0.13)], startPoint: .topLeading, endPoint: .bottomTrailing))
         .cornerRadius(16).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.16)))
     }
+    private var playerBrand: some View { Text("OPEN / MP3").font(.headline.monospaced()).tracking(2) }
+    private var playerState: some View { Text(app.playback.displayState.uppercased()).font(.caption.monospaced()).foregroundColor(lime) }
+    private var shuffleControl: some View {
+        Button { app.setShuffle(!app.playback.shuffle) } label: {
+            Label(app.playback.shuffle ? "Shuffle on" : "Shuffle off", systemImage: "shuffle")
+                .fixedSize(horizontal: false, vertical: true)
+        }.accessibilityValue(app.playback.shuffle ? "On" : "Off").frame(minHeight: 44)
+    }
+    private var repeatControl: some View {
+        Menu {
+            ForEach(RepeatMode.allCases, id: \.self) { mode in
+                Button("Repeat " + mode.rawValue.capitalized) { app.setRepeat(mode) }
+            }
+        } label: {
+            Label("Repeat " + app.playback.repeatMode.rawValue.capitalized, systemImage: app.playback.repeatMode == .one ? "repeat.1" : "repeat")
+                .fixedSize(horizontal: false, vertical: true)
+        }.accessibilityValue(app.playback.repeatMode.rawValue.capitalized).frame(minHeight: 44)
+    }
     private func transport(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon).font(.title2).frame(maxWidth: .infinity, minHeight: 48)
@@ -126,12 +143,9 @@ struct PlayerScreen: View {
     }
     private var collection: some View {
         LazyVStack(alignment: .leading, spacing: 14) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("SELECTED FOLDER").font(.caption.monospaced()).foregroundColor(.secondary)
-                    Text(app.selectedRootName).font(.headline)
-                }
-                Spacer()
+            VStack(alignment: .leading, spacing: 4) {
+                Text("SELECTED FOLDER").font(.caption.monospaced()).foregroundColor(.secondary)
+                Text(app.selectedRootName).font(.headline).fixedSize(horizontal: false, vertical: true)
                 if app.selectedRoot != nil {
                     Button(app.scanObservation.state == .scanning ? "Stop scan" : "Rescan") {
                         if app.scanObservation.state == .scanning { app.stopScan() } else { scan() }

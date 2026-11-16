@@ -37,6 +37,7 @@ public struct RootFolder: Equatable, Hashable, Codable {
                 selectedRoot = savedRoots.first { $0.id == state.selectedID }?.root
             }
         } catch { storageError = "Saved folders could not be restored." }
+        audio?.updateNowPlaying(playback)
     }
     public func stopScan(backgrounded: Bool = false) {
         stopReason = backgrounded ? "App left foreground" : "Scan stopped"

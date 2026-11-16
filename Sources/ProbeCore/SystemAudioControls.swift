@@ -46,19 +46,25 @@ import MediaPlayer
         commands.append((command, token))
     }
     func update(_ playback: PlaybackObservation) {
-        for (command, _) in commands { command.isEnabled = !playback.queue.isEmpty }
-        guard let current = playback.current else {
+        let center = MPRemoteCommandCenter.shared()
+        center.playCommand.isEnabled = playback.canPlay
+        center.pauseCommand.isEnabled = playback.canPause
+        center.togglePlayPauseCommand.isEnabled = playback.canPause || playback.canPlay
+        center.nextTrackCommand.isEnabled = playback.canNext
+        center.previousTrackCommand.isEnabled = playback.canPrevious
+        center.changePlaybackPositionCommand.isEnabled = playback.canSeek
+        guard let current = playback.displayTrack else {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             return
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = [
             MPMediaItemPropertyTitle: current.entry.name,
-            MPMediaItemPropertyAlbumTitle: "OpenMP3",
-            MPMediaItemPropertyPlaybackDuration: playback.duration,
-            MPNowPlayingInfoPropertyElapsedPlaybackTime: playback.seconds,
-            MPNowPlayingInfoPropertyPlaybackRate: playback.state == "playing" ? 1.0 : 0.0,
-            MPNowPlayingInfoPropertyPlaybackQueueIndex: playback.index,
-            MPNowPlayingInfoPropertyPlaybackQueueCount: playback.queue.count
+            MPMediaItemPropertyAlbumTitle: playback.displaySourceName,
+            MPMediaItemPropertyPlaybackDuration: playback.displayDuration,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: playback.displaySeconds,
+            MPNowPlayingInfoPropertyPlaybackRate: playback.displayRate,
+            MPNowPlayingInfoPropertyPlaybackQueueIndex: playback.displayIndex,
+            MPNowPlayingInfoPropertyPlaybackQueueCount: playback.displayCount
         ]
     }
     deinit {

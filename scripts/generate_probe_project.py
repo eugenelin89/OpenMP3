@@ -37,7 +37,7 @@ obj("configs", f'isa = XCConfigurationList; buildConfigurations = ({ident("confi
 obj("target", f'isa = PBXNativeTarget; name = OpenMP3Probe; productName = OpenMP3Probe; productReference = {product}; productType = "com.apple.product-type.application"; buildConfigurationList = {ident("configs")}; buildPhases = ({ident("sources")}); buildRules = (); dependencies = ();')
 obj("project", f'isa = PBXProject; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; knownRegions = (en,Base); mainGroup = {ident("group")}; buildConfigurationList = {ident("configs")}; targets = ({ident("target")}); projectDirPath = ""; projectRoot = "";')
 (project / "project.pbxproj").write_text('// !$*UTF8*$!\n{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {\n' + '\n'.join(objects) + f'\n}}; rootObject = {ident("project")}; }}\n')
-info = dict(CFBundleExecutable="$(EXECUTABLE_NAME)", CFBundleIdentifier="$(PRODUCT_BUNDLE_IDENTIFIER)", CFBundleName="OpenMP3", CFBundleDisplayName="OpenMP3", CFBundlePackageType="APPL", CFBundleShortVersionString="0.1", CFBundleVersion="1", LSRequiresIPhoneOS=True, UILaunchScreen={}, UIBackgroundModes=["audio"], UISupportedInterfaceOrientations=["UIInterfaceOrientationPortrait"])
+info = dict(CFBundleExecutable="$(EXECUTABLE_NAME)", CFBundleIdentifier="$(PRODUCT_BUNDLE_IDENTIFIER)", CFBundleName="OpenMP3", CFBundleDisplayName="OpenMP3", CFBundlePackageType="APPL", CFBundleShortVersionString="0.2", CFBundleVersion="2", LSRequiresIPhoneOS=True, UILaunchScreen={}, UIBackgroundModes=["audio"], UISupportedInterfaceOrientations=["UIInterfaceOrientationPortrait"])
 # Compile app controls from the sole canonical source; do not duplicate product limits here.
 def number(pattern):
     match = re.search(pattern, baseline)
