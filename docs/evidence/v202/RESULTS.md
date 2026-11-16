@@ -6,7 +6,7 @@ V201 remains independent in draft #24; scan wording here is still the baseline w
 
 ## Automated evidence
 
-`swift test`: 29 XCTest cases, zero failures after review corrections. Six new
+`swift test`: 29 XCTest cases, zero failures after review corrections. Six initial new
 application-boundary tests use controlled discovery, recording audio, deterministic
 shuffle and suspended completion. They verify top Play, silent navigation,
 repeat boundaries/history, initial shuffle, partial-result eligibility, empty/failed
@@ -31,7 +31,7 @@ Computer Use, OpenMP3 Keyboard SE simulator, iOS 26.5:
 | Top Play | Track 2 becomes active, source changes to queue source, Pause replaces Play | Passed (synthetic audio only) |
 | Expand Load another folder; focus URL | URL visible above software keyboard, Done visible | Passed |
 | Paste synthetic public-folder URL; Load | URL accepted, Load enabled, new selected saved folder; old queue source retained | Passed |
-| Press Done explicitly | Not separately exercised in this pass | Not tested |
+| Press Done explicitly (follow-up) | Done disappears and URL caret/focus clears; software keyboard was already hidden after Paste | Passed for editing dismissal; software-keyboard dismissal not separately observed |
 
 ## Independent review
 
@@ -48,3 +48,15 @@ sound, VoiceOver, remotes, accessibility-size layouts and legacy compatibility a
 not claimed here. Pending handoff, explicit intent races/recovery integration and
 native metadata are V203–V205. No Drive coverage, scan-budget or v0.1 acceptance
 claims changed. No PR merged or issue closed.
+
+Follow-up: all seven ReadyPlayerTests pass, including retained tracks after a
+deterministically cancelled scan. Full-suite count above precedes that added test.
+
+Signed physical-device SDK build also passed using the existing compatible profile
+and identity (`build_device_probe.py`); build/signing is not device playback proof.
+
+ChatGPT consultation in the designated Ideas conversation reviewed PR #25 at
+9b6cbe9 and supported V203 progression. It did not independently execute tests.
+It requested this Done evidence update and a V203/V204 regression distinguishing
+retryable A from exhausted recovery when B settles. Technical feedback only;
+owner acceptance remains pending.

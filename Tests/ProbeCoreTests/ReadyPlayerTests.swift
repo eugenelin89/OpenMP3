@@ -165,3 +165,23 @@ extension ReadyPlayerTests {
         XCTAssertEqual(app.playback.current?.id, "b")
     }
 }
+
+extension ReadyPlayerTests {
+    @MainActor func testCancelledScanRetainsDiscoveredReadyTracks() async {
+        let drive = SuspendedDrive(), audio = RecordingAudio()
+        drive.fixture.pages["a:"] = DrivePage(files: [
+            DriveEntry(id: "song", name: "song.mp3", mimeType: "audio/mpeg"),
+            DriveEntry(id: "child", name: "Child", mimeType: DriveEntry.folderType)
+        ])
+        drive.suspendRoot = "child"
+        let app = ProbeApplication(drive: drive, audio: audio)
+        app.selectRoot("https://drive.google.com/drive/folders/a")
+        let scan = Task { await app.scan() }
+        await drive.waitForSuspension()
+        app.stopScan(); drive.release(); await scan.value
+        XCTAssertEqual(app.scanObservation.state, "incomplete")
+        XCTAssertEqual(app.playback.ready?.selected.id, "song")
+        XCTAssertTrue(audio.starts.isEmpty)
+        app.play(); XCTAssertEqual(app.playback.current?.id, "song")
+    }
+}
