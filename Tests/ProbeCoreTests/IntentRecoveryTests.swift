@@ -161,3 +161,24 @@ extension IntentRecoveryTests {
         XCTAssertFalse(app.isPlaybackRequested)
     }
 }
+
+extension IntentRecoveryTests {
+    @MainActor func testManualRetryRestoresAAndMovesReadyBBackToPending() async {
+        let drive = FixtureDrive(), audio = RecordingAudio()
+        for root in ["a", "b"] { drive.pages[root + ":"] = DrivePage(files: [DriveEntry(id: root, name: root + ".mp3", mimeType: "audio/mpeg")]) }
+        let app = ProbeApplication(drive: drive, audio: audio)
+        app.selectRoot("https://drive.google.com/drive/folders/a"); app.saveSelectedRoot(name: "A"); await app.scan(); app.play()
+        app.selectRoot("https://drive.google.com/drive/folders/b"); app.saveSelectedRoot(name: "B"); await app.scan()
+        audio.emit(.failed(id: "a")); audio.emit(.failed(id: "a"))
+        XCTAssertEqual(app.playback.displaySource, "Ready: B")
+        app.retryPlayback()
+        XCTAssertNil(app.playback.ready)
+        XCTAssertEqual(app.playback.pending?.root.id, "b")
+        XCTAssertEqual(app.playback.displayTrack?.id, "a")
+        XCTAssertEqual(app.playback.displaySource, "Queue source · A")
+        XCTAssertEqual(audio.starts.last?.id, "a")
+        app.next()
+        XCTAssertEqual(app.playback.current?.id, "b")
+        XCTAssertNil(app.playback.pending)
+    }
+}

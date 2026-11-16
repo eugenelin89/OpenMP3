@@ -106,11 +106,16 @@ extension PlayerBehaviorTests {
         XCTAssertEqual(app.playback.queueSource?.id, "a")
         XCTAssertEqual(app.playback.sourceName, "Morning")
         app.selectSavedRoot(id: "b")
+        app.setShuffle(true); app.setRepeat(.one)
         let relaunched = ProbeApplication(drive: drive, audio: FixtureAudio(), storage: storage)
         XCTAssertEqual(relaunched.selectedRoot?.id, "b")
         XCTAssertEqual(relaunched.savedRoots.map(\.name), ["Evening"])
         XCTAssertTrue(relaunched.tracks.isEmpty)
         XCTAssertTrue(relaunched.playback.queue.isEmpty)
+        XCTAssertNil(relaunched.playback.ready)
+        XCTAssertNil(relaunched.playback.pending)
+        XCTAssertFalse(relaunched.playback.shuffle)
+        XCTAssertEqual(relaunched.playback.repeatMode, .off)
     }
 }
 

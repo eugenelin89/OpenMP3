@@ -226,6 +226,10 @@ extension ProbeApplication {
 extension ProbeApplication {
     public func retryPlayback() {
         guard playback.current != nil else { return }
+        if let ready = playback.ready {
+            playback.pending = ready.collection
+            playback.ready = nil
+        }
         playback.wantsPlayback = true
         playback.retries = 0
         startCurrent(preservingPosition: true, retrying: true)
