@@ -26,7 +26,47 @@ public enum AudioEvent {
 
 public enum RepeatMode: String, CaseIterable { case off, all, one }
 
+public struct ReadyCollection {
+    public let root: RootFolder
+    public let name: String
+    public let tracks: [DiscoveredTrack]
+    public internal(set) var order: [DiscoveredTrack]
+    public internal(set) var index = 0
+    var highWaterIndex = 0
+    var history = [0]
+    var historyPosition = 0
+    mutating func next(repeatMode: RepeatMode) {
+        if historyPosition + 1 < history.count {
+            historyPosition += 1
+            index = history[historyPosition]
+        } else if index + 1 < order.count || repeatMode == .all {
+            index = (index + 1) % order.count
+            highWaterIndex = max(highWaterIndex, index)
+            history.append(index)
+            historyPosition = history.count - 1
+        }
+    }
+    mutating func previous() {
+        guard historyPosition > 0 else { return }
+        historyPosition -= 1
+        index = history[historyPosition]
+    }
+    mutating func setShuffle(_ enabled: Bool, shuffled: ([DiscoveredTrack]) -> [DiscoveredTrack]) {
+        let boundary = highWaterIndex + 1
+        let suffix = Array(order.dropFirst(boundary))
+        let ids = Set(suffix.map(\.id))
+        order = Array(order.prefix(boundary)) + (enabled ? shuffled(suffix) : tracks.filter { ids.contains($0.id) })
+    }
+    public var selected: DiscoveredTrack { order[index] }
+}
+
 public struct PlaybackObservation {
+    public internal(set) var ready: ReadyCollection?
+    public var displayTrack: DiscoveredTrack? { ready?.selected ?? current }
+    public var displayState: String { ready == nil ? state : "ready" }
+    public var displaySource: String { ready.map { "Ready: " + $0.name } ?? (queue.isEmpty ? "Load a folder to prepare music" : "Queue source · " + sourceName) }
+    public var canPlay: Bool { ready != nil || !queue.isEmpty }
+
     public var shuffle = false
     public var repeatMode = RepeatMode.off
     public var unavailableIDs: Set<String> = []

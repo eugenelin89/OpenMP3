@@ -70,12 +70,12 @@ struct PlayerScreen: View {
             HStack {
                 Text("OPEN / MP3").font(.headline.monospaced()).tracking(2)
                 Spacer()
-                Text(app.playback.state.uppercased()).font(.caption.monospaced()).foregroundColor(lime)
+                Text(app.playback.displayState.uppercased()).font(.caption.monospaced()).foregroundColor(lime)
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text(app.playback.current?.entry.name ?? "Ready when you are")
+                Text(app.playback.displayTrack?.entry.name ?? "Load a folder to begin")
                     .font(.title3.monospaced()).foregroundColor(lime).lineLimit(2)
-                Text("Queue source · " + app.playback.sourceName).font(.caption).foregroundColor(.white.opacity(0.8))
+                Text(app.playback.displaySource).font(.caption).foregroundColor(.white.opacity(0.8))
                 HStack {
                     Text(time(app.playback.seconds))
                     Spacer()
@@ -93,7 +93,7 @@ struct PlayerScreen: View {
                     app.handle(.toggle)
                 }
                 transport("Next", icon: "forward.end.fill") { app.next() }
-            }.disabled(app.playback.queue.isEmpty)
+            }.disabled(!app.playback.canPlay)
             HStack {
                 Button { app.setShuffle(!app.playback.shuffle) } label: {
                     Label(app.playback.shuffle ? "Shuffle on" : "Shuffle off", systemImage: "shuffle")
@@ -171,11 +171,6 @@ struct PlayerScreen: View {
             if app.scanObservation.state != "not started" {
                 Text("\(app.scanObservation.shortcuts) shortcuts skipped").font(.caption).foregroundColor(.secondary)
             }
-            HStack {
-                Button { app.setShuffle(false); app.playAll() } label: { Label("Play all", systemImage: "play.fill") }
-                Spacer()
-                Button { app.shuffleAll() } label: { Label("Shuffle all", systemImage: "shuffle") }
-            }.buttonStyle(.bordered).disabled(!app.canPlayCollection)
             ForEach(folderGroups, id: \.path) { group in
                 Text(group.label).font(.headline).padding(.top, 6)
                 ForEach(group.tracks) { track in
@@ -233,7 +228,7 @@ struct PlayerScreen: View {
         NavigationView {
             List {
                 Section(header: Text("Queue source · " + app.playback.sourceName)) {
-                    if app.playback.queue.isEmpty { Text("Choose Play all or a track to start a queue.") }
+                    if app.playback.queue.isEmpty { Text("Load a folder, then use top Play or choose a track.") }
                     ForEach(Array(app.playback.queue.enumerated()), id: \.element.id) { index, track in
                         HStack {
                             Text("\(index + 1)").foregroundColor(.secondary).frame(minWidth: 28)
