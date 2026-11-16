@@ -9,6 +9,12 @@ import SwiftUI
                 app.selectRoot("https://drive.google.com/drive/folders/fixture")
                 app.saveSelectedRoot(name: "Ready collection")
                 await app.scan()
+                if ProcessInfo.processInfo.environment["OPENMP3_PLAYER_SCENARIO"] == "pending" {
+                    app.play()
+                    app.selectRoot("https://drive.google.com/drive/folders/upcoming")
+                    app.saveSelectedRoot(name: "Upcoming collection")
+                    await app.scan()
+                }
             }
         }
     }

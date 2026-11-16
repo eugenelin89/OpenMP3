@@ -5,10 +5,15 @@ import XCTest
     var onCommand: ((PlayerCommand) -> Void)?
     var onEvent: ((AudioEvent) -> Void)?
     var starts: [(id: String, playing: Bool)] = []
+    var callbacks: [(AudioEvent) -> Void] = []
     var resumes = 0
     var pauses = 0
     var seeks: [Double] = []
-    func start(url: URL, id: String, playing: Bool) throws { starts.append((id, playing)) }
+    func start(url: URL, id: String, playing: Bool) throws {
+        starts.append((id, playing))
+        if let onEvent { callbacks.append(onEvent) }
+    }
+    func emit(_ event: AudioEvent) { callbacks.last?(event) }
     func resume() throws { resumes += 1 }
     func pause() { pauses += 1 }
     func seek(seconds: Double) { seeks.append(seconds) }

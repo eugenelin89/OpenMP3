@@ -17,6 +17,7 @@ public struct RootFolder: Equatable, Hashable, Codable {
     @Published public private(set) var storageError: String?
     private let storage: RootStorage?
     private var collections: [RootFolder: SessionCollection] = [:]
+    var audioGeneration = UUID()
     var interrupted = false
     let shuffled: ([DiscoveredTrack]) -> [DiscoveredTrack]
     let audio: AudioOutput?
@@ -29,7 +30,6 @@ public struct RootFolder: Equatable, Hashable, Codable {
         self.shuffled = shuffled
         self.drive = drive; self.audio = audio; self.now = now
         audio?.onCommand = { [weak self] command in self?.handle(command) }
-        audio?.onEvent = { [weak self] event in self?.receive(event) }
         do {
             if let state = try storage?.load() {
                 savedRoots = state.roots.filter { Self.validIdentifier($0.root.id) && ($0.root.resourceKey.map(Self.validIdentifier) ?? true) }
@@ -121,9 +121,13 @@ public struct RootFolder: Equatable, Hashable, Codable {
         scanObservation.elapsedSeconds = max(0, now() - started)
         scanObservation.state = scanObservation.reasons.isEmpty ? "complete" : "incomplete"
         collections[root] = SessionCollection(tracks: tracks, scan: scanObservation, failedPaths: failedFolderPaths, error: error)
-        if canPlayCollection && !playback.hasResumableCurrent {
-            playback.ready = ReadyCollection(root: root, name: selectedRootName, tracks: tracks,
-                                              order: playback.shuffle ? shuffled(tracks) : tracks)
+        if canPlayCollection {
+            let collection = CollectionSnapshot(root: root, name: selectedRootName, tracks: tracks)
+            if playback.hasResumableCurrent {
+                playback.pending = collection
+            } else {
+                playback.ready = ReadyCollection(collection: collection, order: playback.shuffle ? shuffled(tracks) : tracks)
+            }
         }
     }
 

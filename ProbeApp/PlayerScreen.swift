@@ -76,6 +76,9 @@ struct PlayerScreen: View {
                 Text(app.playback.displayTrack?.entry.name ?? "Load a folder to begin")
                     .font(.title3.monospaced()).foregroundColor(lime).lineLimit(2)
                 Text(app.playback.displaySource).font(.caption).foregroundColor(.white.opacity(0.8))
+                if let pending = app.playback.pending {
+                    Text("Up Next: " + pending.name).font(.callout).accessibilityIdentifier("pending-source")
+                }
                 HStack {
                     Text(time(app.playback.seconds))
                     Spacer()
@@ -227,6 +230,11 @@ struct PlayerScreen: View {
     private var queueSheet: some View {
         NavigationView {
             List {
+                if let pending = app.playback.pending {
+                    Section(header: Text("Up Next: " + pending.name)) {
+                        Text("This collection follows the current song or Next. It is not yet the active queue.")
+                    }
+                }
                 Section(header: Text("Queue source · " + app.playback.sourceName)) {
                     if app.playback.queue.isEmpty { Text("Load a folder, then use top Play or choose a track.") }
                     ForEach(Array(app.playback.queue.enumerated()), id: \.element.id) { index, track in

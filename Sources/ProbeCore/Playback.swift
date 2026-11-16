@@ -17,6 +17,7 @@ public enum AudioEvent {
 @MainActor public protocol AudioOutput: AnyObject {
     var onCommand: ((PlayerCommand) -> Void)? { get set }
     func updateNowPlaying(_ playback: PlaybackObservation)
+    /// Capture this callback at each start; events must retain their item-load callback.
     var onEvent: ((AudioEvent) -> Void)? { get set }
     func start(url: URL, id: String, playing: Bool) throws
     func resume() throws
@@ -26,10 +27,17 @@ public enum AudioEvent {
 
 public enum RepeatMode: String, CaseIterable { case off, all, one }
 
-public struct ReadyCollection {
+public struct CollectionSnapshot {
     public let root: RootFolder
     public let name: String
     public let tracks: [DiscoveredTrack]
+}
+
+public struct ReadyCollection {
+    public let collection: CollectionSnapshot
+    public var root: RootFolder { collection.root }
+    public var name: String { collection.name }
+    public var tracks: [DiscoveredTrack] { collection.tracks }
     public internal(set) var order: [DiscoveredTrack]
     public internal(set) var index = 0
     var highWaterIndex = 0
@@ -60,6 +68,7 @@ public struct ReadyCollection {
 
 public struct PlaybackObservation {
     public internal(set) var ready: ReadyCollection?
+    public internal(set) var pending: CollectionSnapshot?
     public var displayTrack: DiscoveredTrack? { ready?.selected ?? current }
     public var displayState: String { ready == nil ? state : "ready" }
     public var displaySource: String { ready.map { "Ready: " + $0.name } ?? (queue.isEmpty ? "Load a folder to prepare music" : "Queue source · " + sourceName) }
